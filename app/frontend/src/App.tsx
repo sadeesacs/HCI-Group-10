@@ -6,6 +6,8 @@ import Layout from "./components/layout/Layout";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
+import Designer from "./pages/Designer";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -13,6 +15,8 @@ const App = () => (
     <TooltipProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/designer" element={<Designer />} />
+
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="*" element={<NotFound />} />
