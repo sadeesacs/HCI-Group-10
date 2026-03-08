@@ -6,6 +6,7 @@ import Footer from "./Footer";
 const Layout = () => {
   const location = useLocation();
   const isHome = location.pathname === "/";
+  const isAuth = ["/login", "/register", "/forgot-password", "/verify-otp", "/reset-password"].includes(location.pathname);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -14,10 +15,10 @@ const Layout = () => {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className={`flex-1 ${isHome ? "" : "pt-20"}`}>
+      <main className={`flex-1 ${isHome || isAuth ? "" : "pt-20"}`}>
         <Outlet />
       </main>
-      <Footer />
+      {!isAuth && <Footer />}
     </div>
   );
 };
