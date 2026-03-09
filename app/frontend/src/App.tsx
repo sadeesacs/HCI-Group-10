@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyOtp from "./pages/VerifyOtp";
 import ResetPassword from "./pages/ResetPassword";
+import Shop from "./pages/Shop";
 import NotFound from "./pages/NotFound";
 
 import Designer from "./pages/Designer";
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/verify-otp" element={<VerifyOtp />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/shop" element={<Shop />} />
 
               <Route path="*" element={<NotFound />} />
             </Route>
