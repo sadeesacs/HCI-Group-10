@@ -105,7 +105,12 @@ export default {
   			warm: {
   				cream: 'hsl(var(--warm-cream))',
   				beige: 'hsl(var(--warm-beige))',
-  				tan: 'hsl(var(--warm-tan))'
+  				tan: 'hsl(var(--warm-tan))',
+  				stone: 'hsl(var(--warm-stone))',
+  				'stone-light': 'hsl(var(--warm-stone-light))',
+  				'stone-muted': 'hsl(var(--warm-stone-muted))',
+  				walnut: 'hsl(var(--warm-walnut))',
+  				'walnut-dark': 'hsl(var(--warm-walnut-dark))'
   			}
   		},
   		borderRadius: {

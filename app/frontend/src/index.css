@@ -52,10 +52,15 @@
     --warm-cream: 38 40% 95%;
     --warm-beige: 35 30% 90%;
     --warm-tan: 30 20% 78%;
+    --warm-stone: 30 8% 22%;
+    --warm-stone-light: 32 6% 28%;
+    --warm-stone-muted: 30 5% 55%;
+    --warm-walnut: 28 35% 32%;
+    --warm-walnut-dark: 28 30% 18%;
     --hero-gradient: linear-gradient(135deg, hsl(38 40% 95%) 0%, hsl(35 30% 90%) 50%, hsl(40 33% 98%) 100%);
     --card-shadow: 0 4px 20px -4px hsl(30 15% 28% / 0.08);
     --card-shadow-hover: 0 12px 32px -8px hsl(30 15% 28% / 0.14);
-    --font-display: 'Inter', system-ui, sans-serif;
+    --font-display: 'Lora', Georgia, serif;
     --font-brand: 'Playfair Display', Georgia, serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --chart-1: 41 22.2% 64.6%;
@@ -110,6 +115,11 @@
     --warm-cream: 30 12% 14%;
     --warm-beige: 30 10% 16%;
     --warm-tan: 30 10% 30%;
+    --warm-stone: 30 8% 18%;
+    --warm-stone-light: 32 6% 24%;
+    --warm-stone-muted: 30 5% 50%;
+    --warm-walnut: 28 35% 28%;
+    --warm-walnut-dark: 28 35% 22%;
     --chart-1: 264 24.3% 48.8%;
     --chart-2: 162 17% 69.6%;
     --chart-3: 70 18.8% 76.9%;
@@ -135,6 +145,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
