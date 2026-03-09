@@ -22,7 +22,7 @@ const WhyFromUs = () => {
             Why From Us?
           </Badge>
 
-          <h2 className="font-display mx-auto max-w-5xl text-4xl font-normal leading-tight text-foreground sm:text-5xl lg:text-6xl">
+          <h2 className="font-serif mx-auto max-w-5xl text-4xl font-normal leading-snug text-foreground sm:text-5xl lg:text-[3.5rem] xl:text-6xl tracking-normal">
             We are crafting amazing{" "}
             <img 
               src={chair1} 

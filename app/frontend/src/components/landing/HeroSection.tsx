@@ -38,7 +38,7 @@ const HeroSection = () => {
             className="font-display text-[2.5rem] font-bold leading-[1.08] text-white sm:text-5xl lg:text-[3.5rem]"
           >
             Furniture for{" "}
-            <span className="italic font-normal">warm</span>,{" "}
+            warm,{" "}
             modern living.
           </motion.h1>
 

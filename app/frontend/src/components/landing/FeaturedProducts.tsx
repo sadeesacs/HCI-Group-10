@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Heart, Eye } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { bestSellers, formatPrice } from "@/data/mock";
 import type { Product } from "@/data/mock";
@@ -11,80 +11,79 @@ const FeaturedProducts = () => {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   return (
-    <section className="py-16 lg:py-24">
+    <section className="py-12 lg:py-16 bg-warm-cream/60">
       <div className="container">
-        <div className="text-center">
-          <h2 className="font-display text-3xl font-semibold text-foreground lg:text-4xl">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground mb-3">
+            Curated for you
+          </p>
+          <h2 className="font-display text-3xl font-normal text-foreground lg:text-5xl">
             Best Sellers
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-sm text-sm text-muted-foreground leading-relaxed">
             Pieces our customers keep coming back for.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {bestSellers.slice(0, 8).map((product, i) => (
+        {/* Product Grid — single row, 4 items */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {bestSellers.slice(0, 4).map((product, i) => (
             <motion.div
               key={product.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.05 }}
+              transition={{ duration: 0.45, delay: i * 0.08 }}
             >
-              <Link
-                to={`/product/${product.id}`}
-                className="group block overflow-hidden rounded-xl border border-border/60 bg-card transition-all hover:shadow-lg"
-              >
-                <div className="relative aspect-square overflow-hidden bg-white">
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-                  />
-                  {product.tag && (
-                    <span className="absolute left-3 top-3 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
-                      {product.tag}
-                    </span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
+              <div className="group overflow-hidden rounded-xl border-2 border-warm-tan/40 bg-white shadow-[0_2px_16px_-4px_hsl(30_15%_28%/0.08)] transition-all duration-300 hover:shadow-[0_8px_30px_-6px_hsl(30_15%_28%/0.16)] hover:-translate-y-1">
+                {/* Image */}
+                <Link to={`/product/${product.id}`} className="block">
+                  <div className="relative aspect-square overflow-hidden bg-white">
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="h-full w-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                </Link>
+
+                {/* Divider */}
+                <div className="h-px bg-warm-tan/30" />
+
+                {/* Content */}
+                <div className="px-5 py-5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     {product.category}
                   </p>
-                  <h3 className="mt-1 font-display text-lg font-semibold text-foreground">
-                    {product.name}
-                  </h3>
-                  <p className="mt-1 text-sm font-medium text-foreground">
+                  <Link to={`/product/${product.id}`}>
+                    <h3 className="mt-2 font-display text-base font-semibold leading-snug text-foreground transition-colors hover:text-muted-foreground">
+                      {product.name}
+                    </h3>
+                  </Link>
+                  <p className="mt-2 text-sm font-semibold tracking-wide text-foreground">
                     {formatPrice(product.price)}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setQuickViewProduct(product);
-                      }}
-                    >
-                      <Eye size={14} className="mr-1.5" /> Quick view
-                    </Button>
-                    <button
-                      onClick={(e) => e.preventDefault()}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-accent hover:text-accent"
-                    >
-                      <Heart size={14} />
-                    </button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 w-full text-xs font-medium tracking-wide border-warm-tan/50 hover:bg-warm-cream"
+                    onClick={() => setQuickViewProduct(product)}
+                  >
+                    Quick View
+                  </Button>
                 </div>
-              </Link>
+              </div>
             </motion.div>
           ))}
         </div>
 
-        <div className="mt-10 text-center">
-          <Button asChild variant="outline" size="lg">
-            <Link to="/shop">Browse all</Link>
+        {/* CTA */}
+        <div className="mt-14 text-center">
+          <Button asChild variant="outline" size="lg" className="border-foreground/20 hover:bg-warm-cream">
+            <Link to="/shop">
+              Browse All <ArrowRight size={16} className="ml-1" />
+            </Link>
           </Button>
         </div>
       </div>
