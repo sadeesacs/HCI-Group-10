@@ -47,7 +47,7 @@ const Register = () => {
               Create your account
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Save wishlists, faster checkout, and access your design journey.
+              Faster checkout, saved preferences, and access to your design journey.
             </p>
           </div>
 

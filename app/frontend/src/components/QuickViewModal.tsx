@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Heart, Minus, Plus, ExternalLink } from "lucide-react";
+import { Minus, Plus, ExternalLink } from "lucide-react";
 import type { Product } from "@/data/mock";
 import { formatPrice } from "@/data/mock";
 import { cn } from "@/lib/utils";
@@ -114,20 +114,7 @@ const QuickViewModal = ({ product, open, onOpenChange }: QuickViewModalProps) =>
             </div>
 
             <div className="mt-auto flex flex-col gap-2 pt-2">
-              <div className="flex gap-2">
-                <Button className="flex-1">Add to Cart</Button>
-                <button
-                  onClick={() => toggle(product.id, product.colors[selectedColor])}
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-lg border transition-colors",
-                    wishlisted
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-border text-muted-foreground hover:border-accent hover:text-accent"
-                  )}
-                >
-                  <Heart size={16} fill={wishlisted ? "currentColor" : "none"} />
-                </button>
-              </div>
+              <Button className="w-full">Add to Cart</Button>
               <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
                 <Link to={`/product/${product.id}`}>
                   View full details <ExternalLink size={14} className="ml-1.5" />
