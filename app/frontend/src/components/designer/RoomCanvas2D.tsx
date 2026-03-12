@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Stage, Layer, Rect, Line, Text, Group, Circle, Transformer } from "react-konva";
 import Konva from "konva";
 import { MousePointer } from "lucide-react";
+import type { RoomConfig, RoomDimensions } from "@/types/designer";
+import { getRoomPolygon, getRoomBoundingBox, getWallSegments, normalizeRoomDimensions, validateRoomDimensions } from "@/lib/room-geometry";
 
 export interface PlacedFurniture {
   id: string;
@@ -15,47 +17,26 @@ export interface PlacedFurniture {
   label: string;
 }
 
-export interface RoomConfig {
-  shape: string;
-  widthM: number;
-  lengthM: number;
-  wallColor: string;
-  floorColor: string;
-}
-
 interface Props {
   roomConfig: RoomConfig;
   furniture: PlacedFurniture[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onFurnitureUpdate: (id: string, attrs: Partial<PlacedFurniture>) => void;
+  onRoomConfigChange?: (config: RoomConfig) => void;
 }
 
 const GRID_SIZE = 30;
 const SNAP = 15;
 const snap = (v: number) => Math.round(v / SNAP) * SNAP;
 
-function getRoomOutline(shape: string, w: number, h: number, ox: number, oy: number): number[] {
-  switch (shape) {
-    case "l-shape": {
-      const cutW = w * 0.45;
-      const cutH = h * 0.45;
-      return [ox, oy, ox + w, oy, ox + w, oy + h - cutH, ox + w - cutW, oy + h - cutH, ox + w - cutW, oy + h, ox, oy + h, ox, oy];
-    }
-    case "studio": {
-      const inset = Math.min(w, h) * 0.12;
-      return [ox + inset, oy, ox + w - inset, oy, ox + w, oy + inset, ox + w, oy + h - inset, ox + w - inset, oy + h, ox + inset, oy + h, ox, oy + h - inset, ox, oy + inset, ox + inset, oy];
-    }
-    default:
-      return [ox, oy, ox + w, oy, ox + w, oy + h, ox, oy + h, ox, oy];
-  }
-}
-
-const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurnitureUpdate }: Props) => {
+const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurnitureUpdate, onRoomConfigChange }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
+  const [selectedWallIdx, setSelectedWallIdx] = useState<number | null>(null);
+  const [wallEditValue, setWallEditValue] = useState("");
 
   useEffect(() => {
     const el = containerRef.current;
@@ -80,23 +61,62 @@ const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurniture
     tr.getLayer()?.batchDraw();
   }, [selectedId, furniture]);
 
-  const PX_PER_M = Math.min((stageSize.width - 120) / roomConfig.widthM, (stageSize.height - 120) / roomConfig.lengthM, 120);
-  const roomW = roomConfig.widthM * PX_PER_M;
-  const roomH = roomConfig.lengthM * PX_PER_M;
+  const bbox = getRoomBoundingBox(roomConfig);
+  const PX_PER_M = Math.min((stageSize.width - 120) / bbox.width, (stageSize.height - 120) / bbox.height, 120);
+  const roomW = bbox.width * PX_PER_M;
+  const roomH = bbox.height * PX_PER_M;
   const offsetX = (stageSize.width - roomW) / 2;
   const offsetY = (stageSize.height - roomH) / 2;
-  const roomOutline = getRoomOutline(roomConfig.shape, roomW, roomH, offsetX, offsetY);
+  // Get polygon in meters then scale to pixels and offset
+  const polyM = getRoomPolygon(roomConfig);
+  const roomOutline: number[] = [];
+  for (let i = 0; i < polyM.length; i += 2) {
+    roomOutline.push(polyM[i] * PX_PER_M + offsetX, polyM[i + 1] * PX_PER_M + offsetY);
+  }
+
+  // Wall segments for interactive selection
+  const wallSegments = getWallSegments(roomConfig);
+  const dimValues = roomConfig.dimensions.dims as unknown as Record<string, number>;
 
   const gridLines: number[][] = [];
   for (let x = 0; x <= stageSize.width; x += GRID_SIZE) gridLines.push([x, 0, x, stageSize.height]);
   for (let y = 0; y <= stageSize.height; y += GRID_SIZE) gridLines.push([0, y, stageSize.width, y]);
 
   const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.target === e.target.getStage()) onSelect(null);
+    if (e.target === e.target.getStage()) {
+      onSelect(null);
+      setSelectedWallIdx(null);
+    }
   }, [onSelect]);
 
+  const handleWallClick = useCallback((idx: number) => {
+    onSelect(null);
+    setSelectedWallIdx((prev) => {
+      if (prev === idx) return null;
+      const wall = wallSegments[idx];
+      if (wall.dimKey) setWallEditValue(String(dimValues[wall.dimKey] ?? wall.lengthM));
+      return idx;
+    });
+  }, [onSelect, wallSegments, dimValues]);
+
+  const handleWallDimApply = useCallback(() => {
+    if (selectedWallIdx === null || !onRoomConfigChange) return;
+    const wall = wallSegments[selectedWallIdx];
+    if (!wall.dimKey) return;
+    const parsed = parseFloat(wallEditValue);
+    if (isNaN(parsed) || parsed <= 0) return;
+    const rounded = Math.round(parsed * 10) / 10;
+    const updated = { ...roomConfig.dimensions, dims: { ...roomConfig.dimensions.dims, [wall.dimKey]: rounded } } as RoomDimensions;
+    const normalized = normalizeRoomDimensions(updated);
+    const validation = validateRoomDimensions(normalized);
+    if (validation.valid) {
+      onRoomConfigChange({ ...roomConfig, dimensions: normalized });
+      setSelectedWallIdx(null);
+    }
+  }, [selectedWallIdx, wallSegments, wallEditValue, roomConfig, onRoomConfigChange]);
+
   const hasFurniture = furniture.length > 0;
-  const hasRoom = roomConfig.widthM > 0 && roomConfig.lengthM > 0;
+  const hasRoom = bbox.width > 0 && bbox.height > 0;
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden">
@@ -113,9 +133,34 @@ const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurniture
         {hasRoom && (
           <Layer listening={false}>
             <Line points={roomOutline} closed fill={roomConfig.floorColor || "hsl(35, 30%, 92%)"} opacity={0.3} />
-            <Line points={roomOutline} closed={false} stroke="hsl(28, 35%, 32%)" strokeWidth={2} lineJoin="round" />
-            <Text x={offsetX + roomW / 2 - 20} y={offsetY - 18} text={`${roomConfig.widthM}m`} fontSize={10} fontFamily="Inter, sans-serif" fill="hsl(0, 0%, 45%)" fontStyle="500" />
-            <Text x={offsetX + roomW + 6} y={offsetY + roomH / 2 - 5} text={`${roomConfig.lengthM}m`} fontSize={10} fontFamily="Inter, sans-serif" fill="hsl(0, 0%, 45%)" fontStyle="500" />
+          </Layer>
+        )}
+
+        {/* Interactive walls */}
+        {hasRoom && (
+          <Layer>
+            {wallSegments.map((wall, i) => {
+              const isSelected = selectedWallIdx === i;
+              return (
+                <Line
+                  key={i}
+                  points={[
+                    wall.x1 * PX_PER_M + offsetX,
+                    wall.y1 * PX_PER_M + offsetY,
+                    wall.x2 * PX_PER_M + offsetX,
+                    wall.y2 * PX_PER_M + offsetY,
+                  ]}
+                  stroke={isSelected ? "hsl(28, 80%, 45%)" : "hsl(28, 35%, 32%)"}
+                  strokeWidth={isSelected ? 3.5 : 2}
+                  hitStrokeWidth={14}
+                  onClick={() => handleWallClick(i)}
+                  onTap={() => handleWallClick(i)}
+                />
+              );
+            })}
+            {/* Dimension labels */}
+            <Text x={offsetX + roomW / 2 - 20} y={offsetY - 18} text={`${bbox.width.toFixed(1)}m`} fontSize={10} fontFamily="Inter, sans-serif" fill="hsl(0, 0%, 45%)" fontStyle="500" />
+            <Text x={offsetX + roomW + 6} y={offsetY + roomH / 2 - 5} text={`${bbox.height.toFixed(1)}m`} fontSize={10} fontFamily="Inter, sans-serif" fill="hsl(0, 0%, 45%)" fontStyle="500" />
           </Layer>
         )}
 
@@ -190,6 +235,43 @@ const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurniture
           </div>
         </div>
       )}
+
+      {/* Wall dimension edit popup */}
+      {selectedWallIdx !== null && (() => {
+        const wall = wallSegments[selectedWallIdx];
+        if (!wall.dimKey) return null;
+        const midPxX = ((wall.x1 + wall.x2) / 2) * PX_PER_M + offsetX;
+        const midPxY = ((wall.y1 + wall.y2) / 2) * PX_PER_M + offsetY;
+        const centerX = offsetX + roomW / 2;
+        const centerY = offsetY + roomH / 2;
+        const awayX = midPxX - centerX;
+        const awayY = midPxY - centerY;
+        const awayLen = Math.sqrt(awayX * awayX + awayY * awayY) || 1;
+        const popX = midPxX + (awayX / awayLen) * 30;
+        const popY = midPxY + (awayY / awayLen) * 30;
+        return (
+          <div
+            className="absolute z-30 flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 shadow-lg"
+            style={{ left: popX - 55, top: popY - 16 }}
+          >
+            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">{wall.label}</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              autoFocus
+              value={wallEditValue}
+              onChange={(e) => setWallEditValue(e.target.value)}
+              onBlur={handleWallDimApply}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleWallDimApply();
+                if (e.key === "Escape") setSelectedWallIdx(null);
+              }}
+              className="w-14 rounded border border-input bg-background px-1.5 py-0.5 text-right text-[11px] font-medium text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <span className="text-[10px] text-muted-foreground">m</span>
+          </div>
+        );
+      })()}
     </div>
   );
 };
