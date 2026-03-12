@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Undo2, Redo2, Save, ArrowLeft, Circle, PanelRight } from "lucide-react";
+import { Undo2, Redo2, Save, ArrowLeft, Circle, PanelRight, FolderOpen, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SavedDesignsModal from "@/components/designer/SavedDesignsModal";
-import RoomSetupPanel from "@/components/designer/RoomSetupPanel";
+import RoomSetupWizard from "@/components/designer/RoomSetupWizard";
 import FurnitureLibraryPanel from "@/components/designer/FurnitureLibraryPanel";
 import WorkspaceCenter, { useWorkspaceState } from "@/components/designer/WorkspaceCenter";
 import PropertiesPanel from "@/components/designer/PropertiesPanel";
 import ConfirmDialog from "@/components/designer/ConfirmDialog";
+import { useDesignFiles } from "@/hooks/use-design-files";
+import type { DesignFile, RoomConfig } from "@/types/designer";
 
 type SaveStatus = "saved" | "unsaved" | "saving";
 
@@ -21,8 +22,11 @@ const SAVE_LABELS: Record<SaveStatus, string> = {
 
 const Designer = () => {
   const navigate = useNavigate();
-  const [showSavedDesigns, setShowSavedDesigns] = useState(true);
+  const { slots, createDesign, renameDesign, deleteDesign, updateDesign } = useDesignFiles();
+  const [activeDesign, setActiveDesign] = useState<DesignFile | null>(null);
+  const [showFilePicker, setShowFilePicker] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [showWizard, setShowWizard] = useState(false);
   const ws = useWorkspaceState();
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
@@ -39,12 +43,79 @@ const Designer = () => {
     }, 600);
   }, [ws]);
 
+  const handleOpenDesign = useCallback((design: DesignFile) => {
+    setActiveDesign(design);
+    ws.loadDesign(design);
+    setShowFilePicker(false);
+  }, [ws]);
+
+  const handleCreateDesign = useCallback((slotIndex: number) => {
+    const design = createDesign(slotIndex);
+    setActiveDesign(design);
+    ws.loadDesign(design);
+    setShowFilePicker(false);
+    setShowWizard(true);
+  }, [createDesign, ws]);
+
+  const handleRenameDesign = useCallback((slotIndex: number, name: string) => {
+    renameDesign(slotIndex, name);
+    if (activeDesign?.slotIndex === slotIndex) {
+      setActiveDesign((prev) => (prev ? { ...prev, name } : null));
+    }
+  }, [renameDesign, activeDesign?.slotIndex]);
+
+  const handleDeleteDesign = useCallback((slotIndex: number) => {
+    deleteDesign(slotIndex);
+    if (activeDesign?.slotIndex === slotIndex) {
+      setActiveDesign(null);
+      setShowFilePicker(true);
+    }
+  }, [deleteDesign, activeDesign?.slotIndex]);
+
+  const handleChangeFile = useCallback(() => {
+    setShowFilePicker(true);
+  }, []);
+
+  const handleApplyRoom = useCallback((config: RoomConfig) => {
+    ws.applyRoomConfig(config);
+    // Sync to design slot
+    if (activeDesign) {
+      updateDesign(activeDesign.slotIndex, { roomConfig: config });
+      setActiveDesign((prev) => prev ? { ...prev, roomConfig: config } : null);
+    }
+  }, [ws, activeDesign, updateDesign]);
+
+  const handleWizardComplete = useCallback((config: RoomConfig) => {
+    handleApplyRoom(config);
+    setShowWizard(false);
+  }, [handleApplyRoom]);
+
+  const handleWizardCancel = useCallback(() => {
+    setShowWizard(false);
+  }, []);
+
+  /* ── Room Setup Wizard (full-screen) ── */
+  if (showWizard) {
+    return (
+      <RoomSetupWizard
+        initialConfig={ws.roomConfig}
+        onComplete={handleWizardComplete}
+        onCancel={activeDesign ? handleWizardCancel : undefined}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col bg-[hsl(0,0%,97%)] overflow-hidden">
       <SavedDesignsModal
-        open={showSavedDesigns}
-        onOpenDesign={() => setShowSavedDesigns(false)}
-        onNewDesign={() => setShowSavedDesigns(false)}
+        open={showFilePicker}
+        slots={slots}
+        canClose={activeDesign !== null}
+        onClose={() => setShowFilePicker(false)}
+        onOpenDesign={handleOpenDesign}
+        onCreateDesign={handleCreateDesign}
+        onRenameDesign={handleRenameDesign}
+        onDeleteDesign={handleDeleteDesign}
       />
 
       <ConfirmDialog
@@ -67,6 +138,28 @@ const Designer = () => {
           </Link>
           <span className="text-border">|</span>
           <span className="text-sm font-medium text-foreground/70">Design Studio</span>
+          {activeDesign && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 rounded-md text-[10px] font-medium text-foreground/50 hover:text-foreground hover:bg-accent px-2"
+                onClick={handleChangeFile}
+              >
+                <FolderOpen size={12} />
+                Change File
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 rounded-md text-[10px] font-medium text-foreground/50 hover:text-foreground hover:bg-accent px-2"
+                onClick={() => setShowWizard(true)}
+              >
+                <Settings2 size={12} />
+                Room Settings
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Save status */}
@@ -153,36 +246,18 @@ const Designer = () => {
 
       {/* ── Three-Column Layout ── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
+        {/* Left Sidebar — Furniture Library */}
         <aside className="hidden w-80 shrink-0 border-r border-border bg-background lg:flex lg:flex-col">
-          <Tabs defaultValue="room" className="flex flex-1 flex-col overflow-hidden">
-            <div className="shrink-0 px-3 pt-3 pb-1">
-              <TabsList className="w-full h-8 bg-accent/60 p-0.5 rounded-lg">
-                <TabsTrigger
-                  value="room"
-                  className="flex-1 h-full text-[11px] font-semibold rounded-md data-[state=active]:bg-[hsl(28,35%,32%)] data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  Room
-                </TabsTrigger>
-                <TabsTrigger
-                  value="furniture"
-                  className="flex-1 h-full text-[11px] font-semibold rounded-md data-[state=active]:bg-[hsl(28,35%,32%)] data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  Furniture
-                </TabsTrigger>
-              </TabsList>
+          <div className="shrink-0 px-3 pt-3 pb-1">
+            <div className="flex h-8 items-center rounded-lg bg-accent/60 px-3">
+              <span className="text-[11px] font-semibold text-foreground/70 uppercase tracking-wider">Furniture Library</span>
             </div>
-            <ScrollArea className="flex-1">
-              <div className="p-3">
-                <TabsContent value="room" className="mt-0">
-                  <RoomSetupPanel />
-                </TabsContent>
-                <TabsContent value="furniture" className="mt-0">
-                  <FurnitureLibraryPanel />
-                </TabsContent>
-              </div>
-            </ScrollArea>
-          </Tabs>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3">
+              <FurnitureLibraryPanel />
+            </div>
+          </ScrollArea>
         </aside>
 
         {/* Center Workspace */}
@@ -198,6 +273,8 @@ const Designer = () => {
           handleDuplicate={ws.handleDuplicate}
           requestDelete={ws.requestDelete}
           handleReset={ws.handleReset}
+          designName={activeDesign?.name}
+          onRoomConfigChange={handleApplyRoom}
         />
 
         {/* Right Properties Panel */}
