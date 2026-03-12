@@ -6,6 +6,9 @@ import Footer from "./Footer";
 const Layout = () => {
   const location = useLocation();
   const isHome = location.pathname === "/";
+  const isFaq = location.pathname === "/faq";
+  const isInspiration = location.pathname === "/inspiration";
+  const isAbout = location.pathname === "/about";
   const isAuth = ["/login", "/register", "/forgot-password", "/verify-otp", "/reset-password"].includes(location.pathname);
 
   useEffect(() => {
@@ -15,7 +18,7 @@ const Layout = () => {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className={`flex-1 ${isHome || isAuth ? "" : "pt-20"}`}>
+      <main className={`flex-1 ${isHome || isAuth || isFaq || isInspiration || isAbout ? "" : "pt-20"}`}>
         <Outlet />
       </main>
       {!isAuth && <Footer />}
