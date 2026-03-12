@@ -3,34 +3,23 @@ import { toast } from "sonner";
 import RoomCanvas2D from "./RoomCanvas2D";
 import Room3DPreview from "./Room3DPreview";
 import CanvasToolbar from "./CanvasToolbar";
-import ConfirmDialog from "./ConfirmDialog";
-import type { PlacedFurniture, RoomConfig } from "./RoomCanvas2D";
+import type { PlacedFurniture } from "./RoomCanvas2D";
 import type { SelectionState } from "./PropertiesPanel";
+import type { DesignFile, RoomConfig } from "@/types/designer";
+import { getDefaultRoomConfig, getRoomBoundingBox } from "@/lib/room-geometry";
 
-const INITIAL_FURNITURE: PlacedFurniture[] = [
-  { id: "p1", name: "Nordic Sofa", x: 40, y: 60, width: 120, height: 50, rotation: 0, color: "hsl(35, 28%, 82%)", label: "Sofa" },
-  { id: "p2", name: "Side Table", x: 180, y: 80, width: 35, height: 35, rotation: 0, color: "hsl(28, 30%, 72%)", label: "Table" },
-  { id: "p3", name: "Accent Chair", x: 60, y: 180, width: 50, height: 50, rotation: 15, color: "hsl(32, 25%, 78%)", label: "Chair" },
-  { id: "p4", name: "Bookshelf", x: 240, y: 30, width: 30, height: 90, rotation: 0, color: "hsl(25, 22%, 68%)", label: "Shelf" },
-];
-
-const DEFAULT_ROOM: RoomConfig = {
-  shape: "rectangle",
-  widthM: 4.5,
-  lengthM: 6,
-  wallColor: "hsl(0, 0%, 95%)",
-  floorColor: "hsl(35, 30%, 87%)",
-};
+const DEFAULT_ROOM: RoomConfig = getDefaultRoomConfig("rectangle");
 
 export function useWorkspaceState() {
   const [viewMode, setViewMode] = useState<"2D" | "3D">("2D");
-  const [furniture, setFurniture] = useState<PlacedFurniture[]>(INITIAL_FURNITURE);
+  const [furniture, setFurniture] = useState<PlacedFurniture[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [roomConfig] = useState<RoomConfig>(DEFAULT_ROOM);
+  const [roomConfig, setRoomConfig] = useState<RoomConfig>(DEFAULT_ROOM);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
-  const historyRef = useRef<PlacedFurniture[][]>([INITIAL_FURNITURE]);
+  const initialItemsRef = useRef<PlacedFurniture[]>([]);
+  const historyRef = useRef<PlacedFurniture[][]>([[]]);
   const historyIndexRef = useRef(0);
 
   const pushHistory = useCallback((next: PlacedFurniture[]) => {
@@ -136,7 +125,7 @@ export function useWorkspaceState() {
 
   const handleReset = useCallback(() => {
     if (!selectedId) return;
-    const initial = INITIAL_FURNITURE.find((f) => f.id === selectedId);
+    const initial = initialItemsRef.current.find((f) => f.id === selectedId);
     if (initial) {
       handleFurnitureUpdate(selectedId, { x: initial.x, y: initial.y, rotation: initial.rotation, width: initial.width, height: initial.height });
       toast("Position reset");
@@ -148,15 +137,50 @@ export function useWorkspaceState() {
     toast.success("Design saved");
   }, []);
 
+  const loadDesign = useCallback((design: DesignFile) => {
+    const items = design.items;
+    const room = design.roomConfig;
+    setFurniture(items);
+    setRoomConfig(room);
+    setSelectedId(null);
+    setHasUnsavedChanges(false);
+    setDeleteConfirm(null);
+    setViewMode("2D");
+    initialItemsRef.current = items;
+    historyRef.current = [items];
+    historyIndexRef.current = 0;
+  }, []);
+
+  const applyRoomConfig = useCallback((config: RoomConfig) => {
+    setRoomConfig(config);
+    markDirty();
+
+    // Clamp furniture to new bounding box (MVP: nudge items inside)
+    const bbox = getRoomBoundingBox(config);
+    const maxPxW = bbox.width * 120; // approximate pixel space
+    const maxPxH = bbox.height * 120;
+    setFurniture((prev) => {
+      const clamped = prev.map((f) => {
+        const nx = Math.min(f.x, Math.max(0, maxPxW - f.width));
+        const ny = Math.min(f.y, Math.max(0, maxPxH - f.height));
+        if (nx !== f.x || ny !== f.y) return { ...f, x: nx, y: ny };
+        return f;
+      });
+      // Only push history if something actually moved
+      if (clamped.some((f, i) => f !== prev[i])) pushHistory(clamped);
+      return clamped;
+    });
+  }, [markDirty, pushHistory]);
+
   return {
     viewMode, setViewMode,
     furniture, selectedId, setSelectedId, selectedItem,
-    roomConfig, selectionState,
+    roomConfig, setRoomConfig, applyRoomConfig, selectionState,
     hasUnsavedChanges,
     canUndo, canRedo, handleUndo, handleRedo,
     handleFurnitureUpdate, handleRotate, handleDuplicate,
     requestDelete, deleteConfirm, confirmDelete, cancelDelete,
-    handleReset, handleSave,
+    handleReset, handleSave, loadDesign,
   };
 }
 
@@ -173,6 +197,8 @@ interface WorkspaceCenterProps {
   handleDuplicate: () => void;
   requestDelete: () => void;
   handleReset: () => void;
+  designName?: string;
+  onRoomConfigChange?: (config: RoomConfig) => void;
 }
 
 const WorkspaceCenter = ({
@@ -180,15 +206,17 @@ const WorkspaceCenter = ({
   furniture, selectedId, setSelectedId,
   roomConfig,
   handleFurnitureUpdate, handleRotate, handleDuplicate, requestDelete, handleReset,
+  designName,
+  onRoomConfigChange,
 }: WorkspaceCenterProps) => {
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-[hsl(0,0%,96%)]">
       {/* Workspace header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-2 lg:px-4">
         <div className="flex items-center gap-2.5">
-          <h2 className="text-[13px] font-semibold text-foreground">My Living Room</h2>
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            Rectangle
+          <h2 className="text-[13px] font-semibold text-foreground">{designName || "Untitled Design"}</h2>
+          <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground capitalize">
+            {roomConfig.shape.replace("-", " ")}
           </span>
           <span className="hidden text-[10px] text-muted-foreground md:inline">
             · {furniture.length} item{furniture.length !== 1 ? "s" : ""}
@@ -224,6 +252,7 @@ const WorkspaceCenter = ({
             selectedId={selectedId}
             onSelect={setSelectedId}
             onFurnitureUpdate={handleFurnitureUpdate}
+            onRoomConfigChange={onRoomConfigChange}
           />
         ) : (
           <Room3DPreview roomConfig={roomConfig} furniture={furniture} />
