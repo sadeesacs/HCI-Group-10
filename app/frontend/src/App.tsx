@@ -15,6 +15,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
 import FAQ from "./pages/FAQ";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 import Designer from "./pages/Designer";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/order-success/:id" element={<OrderSuccess />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/about" element={<About />} />
 
               <Route path="*" element={<NotFound />} />
             </Route>
