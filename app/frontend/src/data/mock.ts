@@ -6,6 +6,12 @@ import bedside1 from "@/assets/products/bedside-1.jpg";
 import armchair1 from "@/assets/products/armchair-1.jpg";
 import console1 from "@/assets/products/console-1.jpg";
 import pendant1 from "@/assets/products/pendant-1.jpg";
+import diningTableNew from "@/assets/products/dining-table-new.jpg";
+import { diningProducts, diningProductExtras } from "./dining-products";
+import { sofaProducts, sofaProductExtras } from "./sofa-products";
+import { bedProducts, bedProductExtras } from "./bed-products";
+import { chairProducts, chairProductExtras } from "./chair-products";
+import { storageProducts, storageProductExtras } from "./storage-products";
 
 export interface Product {
   id: string;
@@ -98,7 +104,7 @@ export const allProducts: Product[] = [
     id: "2", name: "Colombo Dining Table", price: 89000, category: "Tables",
     description: "A generous oak dining table with clean mid-century lines. Seats six comfortably with room to spare.",
     colors: ["Natural Oak", "Walnut"],
-    images: [table1, table1],
+    images: [diningTableNew, diningTableNew],
     popularity: 90,
   },
   {
@@ -175,6 +181,36 @@ export const allProducts: Product[] = [
     popularity: 83,
   },
 ];
+
+// Merge dining products
+allProducts.push(...diningProducts);
+
+// Merge sofa products
+allProducts.push(...sofaProducts);
+
+// Merge dining product extras
+Object.assign(productExtras, diningProductExtras);
+
+// Merge sofa product extras
+Object.assign(productExtras, sofaProductExtras);
+
+// Merge bed products
+allProducts.push(...bedProducts);
+
+// Merge bed product extras
+Object.assign(productExtras, bedProductExtras);
+
+// Merge chair products
+allProducts.push(...chairProducts);
+
+// Merge chair product extras
+Object.assign(productExtras, chairProductExtras);
+
+// Merge storage products
+allProducts.push(...storageProducts);
+
+// Merge storage product extras
+Object.assign(productExtras, storageProductExtras);
 
 export const bestSellers = allProducts.filter(
   (p) => p.tag === "Best Seller" || p.popularity >= 80
