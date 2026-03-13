@@ -43,7 +43,6 @@ interface RoomSetupPanelProps {
 
 const RoomSetupPanel = ({ roomConfig, designName, onApply }: RoomSetupPanelProps) => {
   // Draft state — separate from applied state
-  const [projectName, setProjectName] = useState(designName);
   const [selectedShape, setSelectedShape] = useState<RoomShape>(roomConfig.shape);
   const [dimensions, setDimensions] = useState<RoomDimensions>(roomConfig.dimensions);
   const [colors, setColors] = useState({
@@ -52,19 +51,6 @@ const RoomSetupPanel = ({ roomConfig, designName, onApply }: RoomSetupPanelProps
     ceiling: roomConfig.ceilingColor,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Sync draft when loading a different design
-  useEffect(() => {
-    setProjectName(designName);
-    setSelectedShape(roomConfig.shape);
-    setDimensions(roomConfig.dimensions);
-    setColors({
-      wall: roomConfig.wallColor,
-      floor: roomConfig.floorColor,
-      ceiling: roomConfig.ceilingColor,
-    });
-    setErrors({});
-  }, [roomConfig, designName]);
 
   const handleShapeChange = useCallback((shape: RoomShape) => {
     const newDims = getDefaultDimensions(shape);
@@ -143,8 +129,8 @@ const RoomSetupPanel = ({ roomConfig, designName, onApply }: RoomSetupPanelProps
         <FieldGroup label="Project Name">
           <input
             type="text"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
+            value={designName}
+            readOnly
             placeholder="e.g. My Living Room"
             className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/50 transition-colors focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
           />
