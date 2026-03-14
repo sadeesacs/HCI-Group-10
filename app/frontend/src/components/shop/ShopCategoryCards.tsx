@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Utensils, Sofa, BedDouble, LampDesk, Armchair, LayoutGrid } from "lucide-react";
+import { Utensils, Sofa, BedDouble, LampDesk, Armchair, LayoutGrid, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CategoryCardProps {
@@ -44,21 +44,24 @@ const CategoryCard = ({ label, icon, active, onClick, delay }: CategoryCardProps
   </motion.button>
 );
 
-const categories = [
-  { label: "Dining", filterKey: "Tables", icon: <Utensils size={28} strokeWidth={1.5} /> },
-  { label: "Sofas", filterKey: "Seating", icon: <Sofa size={28} strokeWidth={1.5} /> },
-  { label: "Beds", filterKey: "Storage", icon: <BedDouble size={28} strokeWidth={1.5} /> },
-  { label: "Lighting", filterKey: "Lighting", icon: <LampDesk size={28} strokeWidth={1.5} /> },
-  { label: "Chairs", filterKey: "Seating", icon: <Armchair size={28} strokeWidth={1.5} /> },
-  { label: "Storage", filterKey: "Storage", icon: <LayoutGrid size={28} strokeWidth={1.5} /> },
-];
-
 interface ShopCategoryCardsProps {
   selected: string | null;
   onSelect: (cat: string | null) => void;
+  categories: string[];
 }
 
-const ShopCategoryCards = ({ selected, onSelect }: ShopCategoryCardsProps) => {
+const iconForCategory = (label: string) => {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("dining") || normalized.includes("table")) return <Utensils size={28} strokeWidth={1.5} />;
+  if (normalized.includes("sofa") || normalized.includes("seat")) return <Sofa size={28} strokeWidth={1.5} />;
+  if (normalized.includes("bed")) return <BedDouble size={28} strokeWidth={1.5} />;
+  if (normalized.includes("light")) return <LampDesk size={28} strokeWidth={1.5} />;
+  if (normalized.includes("chair")) return <Armchair size={28} strokeWidth={1.5} />;
+  if (normalized.includes("storage")) return <LayoutGrid size={28} strokeWidth={1.5} />;
+  return <ShoppingBag size={28} strokeWidth={1.5} />;
+};
+
+const ShopCategoryCards = ({ selected, onSelect, categories }: ShopCategoryCardsProps) => {
   return (
     <section className="border-b border-border/40 bg-white py-10 lg:py-14">
       <div className="container">
@@ -72,11 +75,11 @@ const ShopCategoryCards = ({ selected, onSelect }: ShopCategoryCardsProps) => {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {categories.map((cat, i) => (
             <CategoryCard
-              key={cat.label}
-              label={cat.label}
-              icon={cat.icon}
-              active={selected === cat.label}
-              onClick={() => onSelect(selected === cat.label ? null : cat.label)}
+              key={cat}
+              label={cat}
+              icon={iconForCategory(cat)}
+              active={selected === cat}
+              onClick={() => onSelect(selected === cat ? null : cat)}
               delay={i * 0.05}
             />
           ))}

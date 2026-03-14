@@ -107,6 +107,7 @@ const Shop = () => {
       <ShopCategoryCards
         selected={selectedCategory}
         onSelect={setSelectedCategory}
+        categories={categories}
       />
 
       {/* Main Shop Area — white background */}

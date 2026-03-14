@@ -11,7 +11,9 @@ type ListParams = {
 };
 
 async function fetchJson<T>(path: string, params?: Record<string, unknown>): Promise<T> {
-  const url = new URL(path, API_BASE);
+  const base = API_BASE.endsWith("/") ? API_BASE : `${API_BASE}/`;
+  const normalizedPath = path.replace(/^\//, "");
+  const url = new URL(normalizedPath, base);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value === undefined || value === null || value === "") return;
