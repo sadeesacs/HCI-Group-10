@@ -40,6 +40,9 @@ interface CheckoutItem {
 const DELIVERY_FEE = 1500;
 const SHOWROOM_LOCATION = { lat: 6.9271, lng: 79.8612 };
 const MAP_DEFAULT: LatLngExpression = [SHOWROOM_LOCATION.lat, SHOWROOM_LOCATION.lng];
+const NAME_PATTERN = /^[A-Za-z ]+$/;
+const CITY_PATTERN = /^[A-Za-z ]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const markerIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -150,18 +153,97 @@ const Checkout = () => {
   const fieldCn = (name: string) =>
     errors[name] ? "border-destructive focus-visible:ring-destructive" : "";
 
+  const setFieldError = (key: string, message?: string) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (message) next[key] = message;
+      else delete next[key];
+      return next;
+    });
+  };
+
+  const validateField = (key: string, value: string) => {
+    const trimmed = value.trim();
+    switch (key) {
+      case "name":
+        if (!trimmed) return "Required";
+        if (!NAME_PATTERN.test(trimmed)) return "Letters and spaces only";
+        return "";
+      case "email":
+        if (!trimmed) return "Required";
+        if (!EMAIL_PATTERN.test(trimmed)) return "Valid email required";
+        return "";
+      case "phone1":
+        if (!trimmed) return "Required";
+        if (!/^\d+$/.test(trimmed)) return "Numbers only";
+        return "";
+      case "phone2":
+        if (trimmed && !/^\d+$/.test(trimmed)) return "Numbers only";
+        return "";
+      case "line1":
+        if (method === "delivery" && !trimmed) return "Required";
+        return "";
+      case "city":
+        if (method === "delivery") {
+          if (!trimmed) return "Required";
+          if (!CITY_PATTERN.test(trimmed)) return "Letters and spaces only";
+        }
+        return "";
+      case "postal":
+        if (method === "delivery") {
+          if (!trimmed) return "Required";
+          if (!/^\d+$/.test(trimmed)) return "Numbers only";
+        }
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  const handleContactChange = (key: keyof typeof contact, value: string) => {
+    setContact((prev) => ({ ...prev, [key]: value }));
+    const msg = validateField(key, value);
+    setFieldError(key, msg || undefined);
+  };
+
+  const handleAddressChange = (key: keyof typeof address, value: string) => {
+    setAddress((prev) => ({ ...prev, [key]: value }));
+    const msg = validateField(key, value);
+    setFieldError(key, msg || undefined);
+  };
+
+  useEffect(() => {
+    if (method === "pickup") {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.line1;
+        delete next.city;
+        delete next.postal;
+        delete next.pin;
+        return next;
+      });
+    }
+  }, [method]);
+
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!contact.name.trim()) e.name = "Required";
-    if (!contact.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email))
-      e.email = "Valid email required";
-    if (!contact.phone1.trim()) e.phone1 = "Required";
+    const nameMsg = validateField("name", contact.name);
+    if (nameMsg) e.name = nameMsg;
+    const emailMsg = validateField("email", contact.email);
+    if (emailMsg) e.email = emailMsg;
+    const phoneMsg = validateField("phone1", contact.phone1);
+    if (phoneMsg) e.phone1 = phoneMsg;
+    const phone2Msg = validateField("phone2", contact.phone2);
+    if (phone2Msg) e.phone2 = phone2Msg;
     if (items.length === 0) e.items = "Your cart is empty";
 
     if (method === "delivery") {
-      if (!address.line1.trim()) e.line1 = "Required";
-      if (!address.city.trim()) e.city = "Required";
-      if (!address.postal.trim()) e.postal = "Required";
+      const lineMsg = validateField("line1", address.line1);
+      if (lineMsg) e.line1 = lineMsg;
+      const cityMsg = validateField("city", address.city);
+      if (cityMsg) e.city = cityMsg;
+      const postalMsg = validateField("postal", address.postal);
+      if (postalMsg) e.postal = postalMsg;
       if (!pin) e.pin = "Pin your delivery location";
     }
 
@@ -284,7 +366,7 @@ const Checkout = () => {
                     <Input
                       placeholder="Your full name"
                       value={contact.name}
-                      onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                      onChange={(e) => handleContactChange("name", e.target.value)}
                       className={fieldCn("name")}
                       maxLength={100}
                     />
@@ -293,7 +375,7 @@ const Checkout = () => {
                     <Input
                       placeholder="+94XXXXXXXXX"
                       value={contact.phone1}
-                      onChange={(e) => setContact({ ...contact, phone1: e.target.value })}
+                      onChange={(e) => handleContactChange("phone1", e.target.value)}
                       className={fieldCn("phone1")}
                       maxLength={20}
                     />
@@ -303,16 +385,17 @@ const Checkout = () => {
                       type="email"
                       placeholder="your@email.com"
                       value={contact.email}
-                      onChange={(e) => setContact({ ...contact, email: e.target.value })}
+                      onChange={(e) => handleContactChange("email", e.target.value)}
                       className={fieldCn("email")}
                       maxLength={255}
                     />
                   </Field>
-                  <Field label="Phone 2 (optional)">
+                  <Field label="Phone 2 (optional)" error={errors.phone2}>
                     <Input
                       placeholder="+94XXXXXXXXX"
                       value={contact.phone2}
-                      onChange={(e) => setContact({ ...contact, phone2: e.target.value })}
+                      onChange={(e) => handleContactChange("phone2", e.target.value)}
+                      className={fieldCn("phone2")}
                       maxLength={20}
                     />
                   </Field>
@@ -371,7 +454,7 @@ const Checkout = () => {
                     <Field label="Address line 1 *" error={errors.line1} full>
                       <Input
                         value={address.line1}
-                        onChange={(e) => setAddress({ ...address, line1: e.target.value })}
+                        onChange={(e) => handleAddressChange("line1", e.target.value)}
                         className={fieldCn("line1")}
                         maxLength={200}
                       />
@@ -379,14 +462,14 @@ const Checkout = () => {
                     <Field label="Address line 2" full>
                       <Input
                         value={address.line2}
-                        onChange={(e) => setAddress({ ...address, line2: e.target.value })}
+                        onChange={(e) => handleAddressChange("line2", e.target.value)}
                         maxLength={200}
                       />
                     </Field>
                     <Field label="City *" error={errors.city}>
                       <Input
                         value={address.city}
-                        onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                        onChange={(e) => handleAddressChange("city", e.target.value)}
                         className={fieldCn("city")}
                         maxLength={100}
                       />
@@ -394,7 +477,7 @@ const Checkout = () => {
                     <Field label="Postal code *" error={errors.postal}>
                       <Input
                         value={address.postal}
-                        onChange={(e) => setAddress({ ...address, postal: e.target.value })}
+                        onChange={(e) => handleAddressChange("postal", e.target.value)}
                         className={fieldCn("postal")}
                         maxLength={10}
                       />
