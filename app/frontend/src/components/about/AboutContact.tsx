@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { submitContact } from "@/lib/api";
 
 const contactDetails = [
   { icon: Phone, label: "Phone", value: "+94 11 234 5678" },
@@ -30,21 +31,87 @@ const fade = {
 };
 
 const AboutContact = () => {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const NAME_PATTERN = /^[A-Za-z ]+$/;
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_PATTERN = /^\d{10}$/;
+
+  const sanitizePhone = (value: string) => value.replace(/\D/g, "").slice(0, 10);
+
+  const setFieldError = (key: string, message?: string) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (message) next[key] = message;
+      else delete next[key];
+      return next;
+    });
+  };
+
+  const validateField = (key: keyof typeof form, value: string) => {
+    const trimmed = value.trim();
+    switch (key) {
+      case "name":
+        if (!trimmed) return "Required";
+        if (!NAME_PATTERN.test(trimmed)) return "Letters and spaces only";
+        return "";
+      case "email":
+        if (!trimmed) return "Required";
+        if (!EMAIL_PATTERN.test(trimmed)) return "Valid email required";
+        return "";
+      case "phone":
+        if (!trimmed) return "Required";
+        if (!PHONE_PATTERN.test(trimmed)) return "Must be exactly 10 digits";
+        return "";
+      case "subject":
+        if (!trimmed) return "Please select a subject";
+        return "";
+      case "message":
+        if (!trimmed) return "Required";
+        if (trimmed.length < 10) return "Add a bit more detail";
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  const handleFieldChange = (key: keyof typeof form, value: string) => {
+    const nextValue = key === "phone" ? sanitizePhone(value) : value;
+    setForm((prev) => ({ ...prev, [key]: nextValue }));
+    const msg = validateField(key, nextValue);
+    setFieldError(key, msg || undefined);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = "Required";
-    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = "Valid email required";
-    if (!form.subject) errs.subject = "Please select a subject";
-    if (!form.message.trim()) errs.message = "Required";
+    (Object.keys(form) as Array<keyof typeof form>).forEach((key) => {
+      const msg = validateField(key, form[key]);
+      if (msg) errs[key] = msg;
+    });
     setErrors(errs);
     if (Object.keys(errs).length) return;
-    toast.success("Message sent (demo) — thank you for reaching out!");
-    setForm({ name: "", email: "", subject: "", message: "" });
+
+    setSubmitting(true);
+    submitContact({
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      subject: form.subject.trim(),
+      message: form.message.trim(),
+    })
+      .then(() => {
+        toast.success("Thanks! We received your message.");
+        setForm({ name: "", email: "", phone: "", subject: "", message: "" });
+        setErrors({});
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to submit";
+        toast.error(message);
+      })
+      .finally(() => setSubmitting(false));
   };
 
   return (
@@ -73,7 +140,7 @@ const AboutContact = () => {
                       <Label className="mb-1.5 block text-sm font-medium">Full name *</Label>
                       <Input
                         value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onChange={(e) => handleFieldChange("name", e.target.value)}
                         className={errors.name ? "border-destructive" : ""}
                         maxLength={100}
                       />
@@ -84,16 +151,29 @@ const AboutContact = () => {
                       <Input
                         type="email"
                         value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        onChange={(e) => handleFieldChange("email", e.target.value)}
                         className={errors.email ? "border-destructive" : ""}
                         maxLength={255}
                       />
                       {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
                     </div>
+                    <div>
+                      <Label className="mb-1.5 block text-sm font-medium">Phone *</Label>
+                      <Input
+                        value={form.phone}
+                        onChange={(e) => handleFieldChange("phone", e.target.value)}
+                        className={errors.phone ? "border-destructive" : ""}
+                        maxLength={10}
+                      />
+                      {errors.phone && <p className="mt-1 text-xs text-destructive">{errors.phone}</p>}
+                    </div>
                   </div>
                   <div>
                     <Label className="mb-1.5 block text-sm font-medium">Subject *</Label>
-                    <Select value={form.subject} onValueChange={(v) => setForm({ ...form, subject: v })}>
+                    <Select
+                      value={form.subject}
+                      onValueChange={(v) => handleFieldChange("subject", v)}
+                    >
                       <SelectTrigger className={errors.subject ? "border-destructive" : ""}>
                         <SelectValue placeholder="Select a topic" />
                       </SelectTrigger>
@@ -110,15 +190,19 @@ const AboutContact = () => {
                     <Label className="mb-1.5 block text-sm font-medium">Message *</Label>
                     <Textarea
                       value={form.message}
-                      onChange={(e) => setForm({ ...form, message: e.target.value })}
+                      onChange={(e) => handleFieldChange("message", e.target.value)}
                       className={`resize-none ${errors.message ? "border-destructive" : ""}`}
                       rows={4}
                       maxLength={1000}
                     />
                     {errors.message && <p className="mt-1 text-xs text-destructive">{errors.message}</p>}
                   </div>
-                  <Button type="submit" className="w-full gap-1.5 rounded-sm bg-warm-walnut text-primary-foreground hover:bg-warm-walnut/90">
-                    <Send className="h-4 w-4" /> Send Message
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full gap-1.5 rounded-sm bg-warm-walnut text-primary-foreground hover:bg-warm-walnut/90"
+                  >
+                    <Send className="h-4 w-4" /> {submitting ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               </CardContent>

@@ -61,6 +61,14 @@ export type CheckoutPayload = {
   userId?: string;
 };
 
+export type ContactPayload = {
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+};
+
 function buildUrl(path: string, params?: Record<string, unknown>): URL {
   const base = API_BASE.endsWith("/") ? API_BASE : `${API_BASE}/`;
   const normalizedPath = path.replace(/^\//, "");
@@ -130,4 +138,8 @@ export async function createCheckout(payload: CheckoutPayload): Promise<{ order:
 
 export async function fetchOrder(orderNumber: string): Promise<{ order: Order }> {
   return requestJson<{ order: Order }>(`/checkout/${orderNumber}`);
+}
+
+export async function submitContact(payload: ContactPayload): Promise<{ message: string }> {
+  return requestJson<{ message: string }>("/contact", { method: "POST", body: payload });
 }

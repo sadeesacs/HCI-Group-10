@@ -43,6 +43,7 @@ const MAP_DEFAULT: LatLngExpression = [SHOWROOM_LOCATION.lat, SHOWROOM_LOCATION.
 const NAME_PATTERN = /^[A-Za-z ]+$/;
 const CITY_PATTERN = /^[A-Za-z ]+$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^\d{10}$/;
 
 const markerIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -175,10 +176,10 @@ const Checkout = () => {
         return "";
       case "phone1":
         if (!trimmed) return "Required";
-        if (!/^\d+$/.test(trimmed)) return "Numbers only";
+        if (!PHONE_PATTERN.test(trimmed)) return "Must be 10 digits";
         return "";
       case "phone2":
-        if (trimmed && !/^\d+$/.test(trimmed)) return "Numbers only";
+        if (trimmed && !PHONE_PATTERN.test(trimmed)) return "Must be 10 digits";
         return "";
       case "line1":
         if (method === "delivery" && !trimmed) return "Required";
@@ -201,8 +202,9 @@ const Checkout = () => {
   };
 
   const handleContactChange = (key: keyof typeof contact, value: string) => {
-    setContact((prev) => ({ ...prev, [key]: value }));
-    const msg = validateField(key, value);
+    const nextValue = key === "phone1" || key === "phone2" ? value.replace(/\D/g, "").slice(0, 10) : value;
+    setContact((prev) => ({ ...prev, [key]: nextValue }));
+    const msg = validateField(key, nextValue);
     setFieldError(key, msg || undefined);
   };
 
@@ -377,7 +379,7 @@ const Checkout = () => {
                       value={contact.phone1}
                       onChange={(e) => handleContactChange("phone1", e.target.value)}
                       className={fieldCn("phone1")}
-                      maxLength={20}
+                      maxLength={10}
                     />
                   </Field>
                   <Field label="Email *" error={errors.email}>
@@ -396,7 +398,7 @@ const Checkout = () => {
                       value={contact.phone2}
                       onChange={(e) => handleContactChange("phone2", e.target.value)}
                       className={fieldCn("phone2")}
-                      maxLength={20}
+                      maxLength={10}
                     />
                   </Field>
                 </div>

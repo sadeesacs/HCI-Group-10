@@ -9,6 +9,7 @@ type CheckoutItemInput = {
 };
 
 const DELIVERY_FEE = 1500;
+const PHONE_PATTERN = /^\d{10}$/;
 
 function validatePaymentMethod(method: unknown): method is PaymentMethod {
   return method === "cash-on-delivery" || method === "online-mock";
@@ -45,6 +46,11 @@ export async function createCheckout(req: Request, res: Response) {
 
     if (!customer?.name || !customer?.email || !customer?.phone) {
       return res.status(400).json({ message: "Customer name, email, and phone are required" });
+    }
+
+    const trimmedPhone = customer.phone.trim();
+    if (!PHONE_PATTERN.test(trimmedPhone)) {
+      return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
     }
 
     if (
@@ -92,7 +98,7 @@ export async function createCheckout(req: Request, res: Response) {
       customer: {
         name: customer.name.trim(),
         email: customer.email.trim(),
-        phone: customer.phone.trim(),
+        phone: trimmedPhone,
       },
       shippingAddress: {
         line1: shippingAddress.line1.trim(),
