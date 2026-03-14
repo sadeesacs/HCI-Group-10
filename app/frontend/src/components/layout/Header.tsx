@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingBag, Menu, X, User } from "lucide-react";
+import { ShoppingBag, Menu, X, UserRound, LogOut, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
@@ -15,6 +15,7 @@ const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [authUser, setAuthUser] = useState<{ name?: string; email: string } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === "/";
@@ -60,6 +61,14 @@ const Header = () => {
 
   const isTransparent = isHome && !scrolled;
 
+  const handleLogout = () => {
+    localStorage.removeItem("authUser");
+    localStorage.removeItem("authToken");
+    window.dispatchEvent(new Event("auth-changed"));
+    setProfileOpen(false);
+    navigate("/");
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -100,22 +109,53 @@ const Header = () => {
         {/* Right actions */}
         <div className="flex items-center gap-2 lg:gap-3">
           {/* Auth — desktop */}
-          <div className="hidden items-center gap-1 lg:flex">
+          <div className="hidden items-center gap-1 lg:flex relative">
             {authUser ? (
-              <Link
-                to="/"
-                className={`flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px] font-semibold tracking-wide transition-colors duration-300 ${
-                  isTransparent
-                    ? "text-white/95 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
-                    : "text-foreground/70 hover:text-foreground hover:bg-accent"
-                }`}
-                aria-label="Profile"
+              <div
+                className="relative flex items-center"
+                onMouseLeave={() => setProfileOpen(false)}
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(28_35%_32%)] text-white text-sm font-semibold">
-                  <User size={16} />
-                </span>
-                <span className="truncate max-w-[120px] text-left">{authUser.name || authUser.email}</span>
-              </Link>
+                <button
+                  onClick={() => setProfileOpen((v) => !v)}
+                  onMouseEnter={() => setProfileOpen(true)}
+                  className={`flex items-center justify-center rounded-full p-2 transition-all duration-300 border shadow-sm ${
+                    isTransparent
+                      ? "border-white/25 text-white/95 bg-white/5 hover:bg-white/15 backdrop-blur"
+                      : "border-border/70 text-foreground/80 bg-card/80 hover:bg-accent/80"
+                  }`}
+                  aria-label="Profile"
+                >
+                  <UserRound size={18} />
+                </button>
+
+                {profileOpen && (
+                  <div
+                    className="absolute right-0 top-11 w-64 rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.12)] p-4 space-y-3 ring-1 ring-border/40 animate-[fadeIn_120ms_ease-out]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[hsl(28_40%_45%)] to-[hsl(28_35%_32%)] text-white flex items-center justify-center shadow-md">
+                        <UserRound size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{authUser.name || "Account"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{authUser.email}</p>
+                      </div>
+                    </div>
+
+          
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        onClick={handleLogout}
+                        variant="outline"
+                        className="flex-1 justify-center border-[hsl(28_35%_32%)] text-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_32%)] hover:text-white"
+                        size="sm"
+                      >
+                        <LogOut size={14} className="mr-2" /> Log out
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <Link
@@ -126,7 +166,7 @@ const Header = () => {
                       : "text-foreground/70 hover:text-foreground hover:bg-accent"
                   }`}
                 >
-                  <User size={14} />
+                  <UserRound size={14} />
                   Login
                 </Link>
                 <span className={`text-xs ${isTransparent ? "text-white/25" : "text-border"}`}>|</span>
@@ -209,7 +249,7 @@ const Header = () => {
                   size="sm"
                   className="flex-1 bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white"
                 >
-                  <User size={14} className="mr-2" /> Profile
+                  <UserRound size={14} className="mr-2" /> Profile
                 </Button>
               ) : (
                 <>
