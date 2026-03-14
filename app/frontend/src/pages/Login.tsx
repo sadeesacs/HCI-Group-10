@@ -1,19 +1,35 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { loginUser } from "@/lib/api";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Logged in (demo)");
+    setLoading(true);
+
+    try {
+      const result = await loginUser({ email, password });
+      localStorage.setItem("authToken", result.token);
+      localStorage.setItem("authUser", JSON.stringify(result.user));
+      toast.success("Logged in successfully");
+      navigate("/");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to log in";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,9 +103,10 @@ const Login = () => {
 
             <Button
               type="submit"
+              disabled={loading}
               className="w-full gap-2 bg-[hsl(28_35%_32%)] text-white hover:bg-[hsl(28_35%_26%)] h-11 text-sm font-semibold tracking-wide"
             >
-              <LogIn className="h-4 w-4" /> Log in
+              <LogIn className="h-4 w-4" /> {loading ? "Signing in..." : "Log in"}
             </Button>
           </form>
 

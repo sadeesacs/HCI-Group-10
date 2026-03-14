@@ -1,19 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UserPlus, Mail, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { registerUser } from "@/lib/api";
 
 const Register = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = "Required";
@@ -22,7 +25,20 @@ const Register = () => {
     if (form.confirm !== form.password) errs.confirm = "Passwords do not match";
     setErrors(errs);
     if (Object.keys(errs).length) return;
-    toast.success("Account created (demo)");
+
+    setLoading(true);
+    try {
+      const result = await registerUser({ name: form.name.trim(), email: form.email.trim(), password: form.password });
+      localStorage.setItem("authToken", result.token);
+      localStorage.setItem("authUser", JSON.stringify(result.user));
+      toast.success("Account created successfully");
+      navigate("/");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create account";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,9 +109,10 @@ const Register = () => {
 
             <Button
               type="submit"
+              disabled={loading}
               className="w-full gap-2 bg-[hsl(28_35%_32%)] text-white hover:bg-[hsl(28_35%_26%)] h-11 text-sm font-semibold tracking-wide"
             >
-              <UserPlus className="h-4 w-4" /> Create account
+              <UserPlus className="h-4 w-4" /> {loading ? "Creating..." : "Create account"}
             </Button>
           </form>
 
