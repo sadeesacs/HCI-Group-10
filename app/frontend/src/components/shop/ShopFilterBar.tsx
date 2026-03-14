@@ -1,7 +1,6 @@
 import { Search, X, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -19,14 +18,11 @@ interface ShopFilterBarProps {
   maxPrice: string;
   onMinPriceChange: (val: string) => void;
   onMaxPriceChange: (val: string) => void;
-  selectedCategory: string | null;
-  onCategoryChange: (cat: string | null) => void;
   onClearFilters: () => void;
   hasFilters: boolean;
   resultCount: number;
   sort: SortOption;
   onSortChange: (val: SortOption) => void;
-  categories: string[];
 }
 
 const ShopFilterBar = ({
@@ -36,53 +32,14 @@ const ShopFilterBar = ({
   maxPrice,
   onMinPriceChange,
   onMaxPriceChange,
-  selectedCategory,
-  onCategoryChange,
   onClearFilters,
   hasFilters,
   resultCount,
   sort,
   onSortChange,
-  categories,
 }: ShopFilterBarProps) => {
   return (
     <div className="space-y-4">
-      {/* Category pills row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => onCategoryChange(null)}
-          className={cn(
-            "rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 border",
-            selectedCategory === null
-              ? "bg-foreground text-white border-foreground"
-              : "bg-transparent text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground"
-          )}
-        >
-          All
-        </button>
-
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => onCategoryChange(selectedCategory === cat ? null : cat)}
-            className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 border",
-              selectedCategory === cat
-                ? "bg-foreground text-white border-foreground"
-                : "bg-transparent text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground"
-            )}
-          >
-            {cat}
-          </button>
-        ))}
-
-        <div className="flex-1" />
-
-        <span className="text-sm text-muted-foreground">
-          {resultCount} {resultCount === 1 ? "result" : "results"}
-        </span>
-      </div>
-
       {/* Controls row */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
@@ -143,6 +100,12 @@ const ShopFilterBar = ({
             <X size={14} className="mr-1.5" /> Clear
           </Button>
         )}
+
+        <div className="flex-1" />
+
+        <span className="text-sm text-muted-foreground">
+          {resultCount} {resultCount === 1 ? "result" : "results"}
+        </span>
       </div>
     </div>
   );

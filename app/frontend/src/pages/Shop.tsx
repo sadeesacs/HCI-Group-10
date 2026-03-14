@@ -132,14 +132,11 @@ const Shop = () => {
               maxPrice={maxPrice}
               onMinPriceChange={setMinPrice}
               onMaxPriceChange={setMaxPrice}
-              selectedCategory={selectedCategory}
-              onCategoryChange={setSelectedCategory}
               onClearFilters={clearFilters}
               hasFilters={hasFilters}
               resultCount={filtered.length}
               sort={sort}
               onSortChange={setSort}
-              categories={categories}
             />
           </div>
 
