@@ -91,7 +91,10 @@ const Shop = () => {
   }, [products, search, selectedCategory, minPrice, maxPrice, sort]);
 
   const categories = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category))),
+    () =>
+      Array.from(new Set(products.map((p) => p.category))).filter(
+        (c) => c.toLowerCase() !== "lighting"
+      ),
     [products]
   );
 
