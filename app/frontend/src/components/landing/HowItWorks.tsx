@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { ChevronsRight } from "lucide-react";
-import step1Image from "@/assets/steps/step-1-room-layout.jpg";
-import step2Image from "@/assets/steps/step-2-place-furniture.jpg";
-import step3Image from "@/assets/steps/step-3-preview-3d.jpg";
+const step1Image = "/assets/steps/step-1-room-layout.jpg";
+const step2Image = "/assets/steps/step-2-place-furniture.jpg";
+const step3Image = "/assets/steps/step-3-preview-3d.jpg";
 
 const steps = [
   {

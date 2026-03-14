@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Clock, Phone, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import showroomImg from "@/assets/about-showroom.jpg";
+const showroomImg = "/assets/about-showroom.jpg";
 
 const fade = {
   initial: { opacity: 0, y: 20 },

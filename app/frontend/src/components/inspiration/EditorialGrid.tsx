@@ -4,12 +4,12 @@ import { Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import livingImg from "@/assets/rooms/living.jpg";
-import diningImg from "@/assets/rooms/dining.jpg";
-import bedroomImg from "@/assets/rooms/bedroom.jpg";
-import officeImg from "@/assets/rooms/office.jpg";
-import smallImg from "@/assets/rooms/small-spaces.jpg";
-import outdoorImg from "@/assets/rooms/outdoor.jpg";
+const livingImg = "/assets/rooms/living.jpg";
+const diningImg = "/assets/rooms/dining.jpg";
+const bedroomImg = "/assets/rooms/bedroom.jpg";
+const officeImg = "/assets/rooms/office.jpg";
+const smallImg = "/assets/rooms/small-spaces.jpg";
+const outdoorImg = "/assets/rooms/outdoor.jpg";
 
 export interface LookItem {
   id: string;

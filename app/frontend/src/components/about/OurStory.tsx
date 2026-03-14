@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import livingImg from "@/assets/rooms/living.jpg";
+const livingImg = "/assets/rooms/living.jpg";
 
 const fade = {
   initial: { opacity: 0, y: 20 },

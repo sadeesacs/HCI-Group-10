@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, Compass } from "lucide-react";
-import heroImg from "@/assets/inspiration-hero.jpg";
+const heroImg = "/assets/inspiration-hero.jpg";
 
 const InspirationHero = () => (
   <section className="relative h-[85vh] min-h-[540px] overflow-hidden">

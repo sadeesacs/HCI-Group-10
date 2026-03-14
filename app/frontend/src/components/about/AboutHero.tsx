@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImg from "@/assets/about-hero.jpg";
+const heroImg = "/assets/about-hero.jpg";
 
 const AboutHero = () => (
   <section className="relative h-[85vh] min-h-[540px] overflow-hidden">

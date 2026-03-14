@@ -1,4 +1,4 @@
-import shopHeroImage from "@/assets/shop-hero-collection.jpg";
+const shopHeroImage = "/assets/shop-hero-collection.jpg";
 
 const ShopHeroBanner = () => {
   return (

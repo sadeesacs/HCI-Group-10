@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import craftsmanshipImg from "@/assets/about-craftsmanship.jpg";
+const craftsmanshipImg = "/assets/about-craftsmanship.jpg";
 
 const fade = {
   initial: { opacity: 0, y: 20 },

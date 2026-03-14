@@ -2,11 +2,11 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import livingImg from "@/assets/rooms/living.jpg";
-import diningImg from "@/assets/rooms/dining.jpg";
-import bedroomImg from "@/assets/rooms/bedroom.jpg";
-import smallImg from "@/assets/rooms/small-spaces.jpg";
-import outdoorImg from "@/assets/rooms/outdoor.jpg";
+const livingImg = "/assets/rooms/living.jpg";
+const diningImg = "/assets/rooms/dining.jpg";
+const bedroomImg = "/assets/rooms/bedroom.jpg";
+const smallImg = "/assets/rooms/small-spaces.jpg";
+const outdoorImg = "/assets/rooms/outdoor.jpg";
 
 const collections = [
   { title: "Minimal Living Essentials", img: livingImg, link: "/shop?category=Living" },

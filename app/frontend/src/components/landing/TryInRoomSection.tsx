@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Eye, Move, Box } from "lucide-react";
 import { motion } from "framer-motion";
-import tryInRoomImage from "@/assets/try-in-room-feature.png";
+const tryInRoomImage = "/assets/try-in-room-feature.png";
 
 const features = [
   { icon: Eye, title: "Visualize before you buy" },

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Compass } from "lucide-react";
-import bannerImg from "@/assets/inspiration-designer-banner.jpg";
+const bannerImg = "/assets/inspiration-designer-banner.jpg";
 
 const DesignerBanner = () => (
   <section className="relative overflow-hidden py-0">

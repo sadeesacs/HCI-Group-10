@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import chair1 from "@/assets/products/chair-1.jpg";
-import armchair1 from "@/assets/products/armchair-1.jpg";
+const chair1 = "/assets/products/chair-1.jpg";
+const armchair1 = "/assets/products/armchair-1.jpg";
 
 const WhyFromUs = () => {
   const fade = {
