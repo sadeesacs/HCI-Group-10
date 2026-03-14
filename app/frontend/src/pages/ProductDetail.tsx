@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { Product } from "@/types/product";
 import { fetchProduct, fetchProducts } from "@/lib/api";
+import { useCart } from "@/hooks/use-cart";
 import { formatPrice } from "@/lib/format";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import QuickViewModal from "@/components/QuickViewModal";
@@ -25,6 +26,7 @@ const ProductDetail = () => {
   const [viewMode, setViewMode] = useState<"gallery" | "360" | "3d">("gallery");
   const [show3dModal, setShow3dModal] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const { addItem } = useCart();
 
   useEffect(() => {
     let active = true;
@@ -251,7 +253,16 @@ const ProductDetail = () => {
 
               {/* Actions */}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="flex-1 rounded-full bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white font-medium">
+                <Button
+                  size="lg"
+                  className="flex-1 rounded-full bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white font-medium"
+                  onClick={() =>
+                    addItem(product.id, {
+                      quantity,
+                      selectedColor: product.colors[selectedColor],
+                    })
+                  }
+                >
                   <ShoppingCart size={16} className="mr-2" />
                   Add to Cart
                 </Button>

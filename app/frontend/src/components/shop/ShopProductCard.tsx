@@ -1,18 +1,21 @@
 import { Link } from "react-router-dom";
-import { Eye, Heart } from "lucide-react";
+import { Eye, ShoppingCart } from "lucide-react";
 import type { Product } from "@/types/product";
 import { formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/hooks/use-cart";
 
 interface ShopProductCardProps {
   product: Product;
 }
 
 const ShopProductCard = ({ product }: ShopProductCardProps) => {
+  const { addItem } = useCart();
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Added to cart:", product.name);
+    addItem(product.id, { quantity: 1, selectedColor: product.colors[0] });
   };
 
 
@@ -60,15 +63,25 @@ const ShopProductCard = ({ product }: ShopProductCardProps) => {
         </p>
 
         {/* Add to Cart Button */}
-        <Button
-          asChild
-          className="mt-4 w-full rounded-full bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white font-medium h-11"
-        >
-          <Link to={`/product/${product.id}`}>
-            <Eye size={16} className="mr-2" />
-            View Details
-          </Link>
-        </Button>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button
+            onClick={handleAddToCart}
+            className="w-full rounded-full bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white font-medium h-11"
+          >
+            <ShoppingCart size={16} className="mr-2" />
+            Add to Cart
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            className="w-full rounded-full h-11 border-[hsl(28_35%_32%)] text-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_32%/0.08)]"
+          >
+            <Link to={`/product/${product.id}`}>
+              <Eye size={16} className="mr-2" />
+              View
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

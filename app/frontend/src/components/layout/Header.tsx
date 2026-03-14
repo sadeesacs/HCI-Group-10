@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, X, UserRound, LogOut, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useCart } from "@/hooks/use-cart";
 
 const navLinks = [
   { label: "Home", to: "/" },
@@ -16,6 +17,7 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [authUser, setAuthUser] = useState<{ name?: string; email: string } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const { totalQuantity } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === "/";
@@ -194,9 +196,11 @@ const Header = () => {
             }`}
           >
             <ShoppingBag size={19} />
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(28_35%_32%)] text-[10px] font-semibold text-white">
-              3
-            </span>
+            {totalQuantity > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[hsl(28_35%_32%)] px-1 text-[10px] font-semibold text-white">
+                {totalQuantity}
+              </span>
+            )}
           </Link>
 
           {/* Try in Your Room — rightmost */}

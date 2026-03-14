@@ -6,6 +6,7 @@ import { Minus, Plus, ExternalLink } from "lucide-react";
 import type { Product } from "@/types/product";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/hooks/use-cart";
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -17,6 +18,7 @@ const QuickViewModal = ({ product, open, onOpenChange }: QuickViewModalProps) =>
   const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const { addItem } = useCart();
 
   if (!product) return null;
 
@@ -114,7 +116,15 @@ const QuickViewModal = ({ product, open, onOpenChange }: QuickViewModalProps) =>
             </div>
 
             <div className="mt-auto flex flex-col gap-2 pt-2">
-              <Button className="w-full">Add to Cart</Button>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  addItem(product.id, { quantity, selectedColor: product.colors[selectedColor] });
+                  onOpenChange(false);
+                }}
+              >
+                Add to Cart
+              </Button>
               <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
                 <Link to={`/product/${product.id}`}>
                   View full details <ExternalLink size={14} className="ml-1.5" />

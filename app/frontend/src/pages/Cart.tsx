@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/format";
-import { fetchProducts } from "@/lib/api";
+import { fetchProduct } from "@/lib/api";
+import { useCart } from "@/hooks/use-cart";
 
 interface CartItem {
   productId: string;
@@ -21,6 +22,7 @@ interface CartItem {
 const DELIVERY_FEE = 1500;
 
 const Cart = () => {
+  const { entries, updateQuantity: updateQtyRaw, removeItem: removeRaw } = useCart();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,18 +30,35 @@ const Cart = () => {
   useEffect(() => {
     let active = true;
     (async () => {
+      setLoading(true);
       try {
-        const products = await fetchProducts({ sort: "popular" });
+        if (!entries.length) {
+          if (active) setItems([]);
+          return;
+        }
+
+        const products = await Promise.all(
+          entries.map((entry) => fetchProduct(entry.productId).catch(() => null))
+        );
+
         if (!active) return;
-        const seeded: CartItem[] = products.slice(0, 3).map((p) => ({
-          productId: p.id,
-          name: p.name,
-          price: p.price,
-          image: p.images[0],
-          selectedColor: p.colors[0],
-          quantity: 1,
-        }));
-        setItems(seeded);
+
+        const merged: CartItem[] = entries.flatMap((entry, idx) => {
+          const product = products[idx];
+          if (!product) return [];
+          return [
+            {
+              productId: entry.productId,
+              name: product.name,
+              price: product.price,
+              image: product.images[0],
+              selectedColor: entry.selectedColor || product.colors[0],
+              quantity: entry.quantity,
+            },
+          ];
+        });
+
+        setItems(merged);
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Failed to load cart");
@@ -51,16 +70,13 @@ const Cart = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [entries]);
 
-  const updateQty = (id: string, delta: number) =>
-    setItems((prev) =>
-      prev.map((i) =>
-        i.productId === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i
-      )
-    );
+  const updateQty = (id: string, quantity: number, selectedColor?: string) => {
+    updateQtyRaw(id, quantity, selectedColor);
+  };
 
-  const remove = (id: string) => setItems((prev) => prev.filter((i) => i.productId !== id));
+  const remove = (id: string, selectedColor?: string) => removeRaw(id, selectedColor);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const total = subtotal + (items.length ? DELIVERY_FEE : 0);
@@ -157,7 +173,7 @@ const Cart = () => {
                           {/* qty stepper */}
                           <div className="flex items-center rounded-md border border-border">
                             <button
-                              onClick={() => updateQty(item.productId, -1)}
+                              onClick={() => updateQty(item.productId, Math.max(1, item.quantity - 1), item.selectedColor)}
                               className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                               aria-label="Decrease quantity"
                             >
@@ -167,7 +183,7 @@ const Cart = () => {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateQty(item.productId, 1)}
+                              onClick={() => updateQty(item.productId, item.quantity + 1, item.selectedColor)}
                               className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                               aria-label="Increase quantity"
                             >
@@ -176,7 +192,7 @@ const Cart = () => {
                           </div>
 
                           <button
-                            onClick={() => remove(item.productId)}
+                            onClick={() => remove(item.productId, item.selectedColor)}
                             className="text-muted-foreground transition-colors hover:text-destructive"
                             aria-label="Remove item"
                           >
