@@ -1,6 +1,6 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, HydratedDocument } from "mongoose";
 
-export interface ProductDocument extends Document {
+export interface ProductAttrs {
   name: string;
   price: number;
   category: string;
@@ -8,14 +8,16 @@ export interface ProductDocument extends Document {
   description: string;
   colors: string[];
   images: string[];
-  isNew: boolean;
+  isNew?: boolean;
   popularity: number;
   longDescription?: string;
   dimensions?: string;
-  materials: string[];
+  materials?: string[];
 }
 
-const productSchema = new Schema<ProductDocument>(
+export type ProductDocument = HydratedDocument<ProductAttrs>;
+
+const productSchema = new Schema<ProductAttrs>(
   {
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
@@ -35,8 +37,8 @@ const productSchema = new Schema<ProductDocument>(
     versionKey: false,
     toJSON: {
       virtuals: true,
-      transform: (_doc, ret) => {
-        ret.id = ret._id.toString();
+      transform: (_doc, ret: any) => {
+        ret.id = ret._id?.toString();
         delete ret._id;
         return ret;
       },
@@ -47,4 +49,4 @@ const productSchema = new Schema<ProductDocument>(
 productSchema.index({ category: 1 });
 productSchema.index({ popularity: -1 });
 
-export const Product = model<ProductDocument>("Product", productSchema);
+export const Product = model<ProductAttrs>("Product", productSchema);

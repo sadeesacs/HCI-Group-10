@@ -1,14 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { bestSellers, formatPrice } from "@/data/mock";
-import type { Product } from "@/data/mock";
+import { formatPrice } from "@/lib/format";
+import { fetchProducts } from "@/lib/api";
+import type { Product } from "@/types/product";
 import QuickViewModal from "@/components/QuickViewModal";
 
 const FeaturedProducts = () => {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const popular = await fetchProducts({ sort: "popular" });
+        if (active) setProducts(popular.slice(0, 4));
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load products");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <section className="py-12 lg:py-16 bg-warm-cream/60">
@@ -28,7 +47,13 @@ const FeaturedProducts = () => {
 
         {/* Product Grid — single row, 4 items */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {bestSellers.slice(0, 4).map((product, i) => (
+          {error && (
+            <div className="sm:col-span-2 lg:col-span-4 text-center text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          {products.map((product, i) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 24 }}
@@ -76,6 +101,12 @@ const FeaturedProducts = () => {
               </div>
             </motion.div>
           ))}
+
+          {!error && products.length === 0 && (
+            <div className="sm:col-span-2 lg:col-span-4 text-center text-sm text-muted-foreground">
+              Products will appear once available.
+            </div>
+          )}
         </div>
 
         {/* CTA */}

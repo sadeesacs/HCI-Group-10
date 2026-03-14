@@ -2,7 +2,6 @@ import { Search, X, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { productCategories } from "@/data/mock";
 import {
   Select,
   SelectContent,
@@ -27,6 +26,7 @@ interface ShopFilterBarProps {
   resultCount: number;
   sort: SortOption;
   onSortChange: (val: SortOption) => void;
+  categories: string[];
 }
 
 const ShopFilterBar = ({
@@ -43,6 +43,7 @@ const ShopFilterBar = ({
   resultCount,
   sort,
   onSortChange,
+  categories,
 }: ShopFilterBarProps) => {
   return (
     <div className="space-y-4">
@@ -60,7 +61,7 @@ const ShopFilterBar = ({
           All
         </button>
 
-        {productCategories.map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => onCategoryChange(selectedCategory === cat ? null : cat)}

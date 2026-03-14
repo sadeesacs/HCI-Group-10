@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,7 +6,8 @@ import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { allProducts, formatPrice } from "@/data/mock";
+import { formatPrice } from "@/lib/format";
+import { fetchProducts } from "@/lib/api";
 
 interface CartItem {
   productId: string;
@@ -17,36 +18,40 @@ interface CartItem {
   quantity: number;
 }
 
-const initialCart: CartItem[] = [
-  {
-    productId: "1",
-    name: allProducts[0].name,
-    price: allProducts[0].price,
-    image: allProducts[0].images[0],
-    selectedColor: allProducts[0].colors[0],
-    quantity: 1,
-  },
-  {
-    productId: "5",
-    name: allProducts[4].name,
-    price: allProducts[4].price,
-    image: allProducts[4].images[0],
-    selectedColor: allProducts[4].colors[0],
-    quantity: 2,
-  },
-  {
-    productId: "4",
-    name: allProducts[3].name,
-    price: allProducts[3].price,
-    image: allProducts[3].images[0],
-    quantity: 1,
-  },
-];
-
 const DELIVERY_FEE = 1500;
 
 const Cart = () => {
-  const [items, setItems] = useState<CartItem[]>(initialCart);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const products = await fetchProducts({ sort: "popular" });
+        if (!active) return;
+        const seeded: CartItem[] = products.slice(0, 3).map((p) => ({
+          productId: p.id,
+          name: p.name,
+          price: p.price,
+          image: p.images[0],
+          selectedColor: p.colors[0],
+          quantity: 1,
+        }));
+        setItems(seeded);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load cart");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const updateQty = (id: string, delta: number) =>
     setItems((prev) =>
@@ -71,7 +76,19 @@ const Cart = () => {
         <p className="mt-1 text-sm text-muted-foreground">{items.length} {items.length === 1 ? 'item' : 'items'} in your cart</p>
       </div>
       <section className="container pt-4 pb-10 lg:pt-6 lg:pb-14">
-        {items.length === 0 ? (
+        {loading ? (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-auto max-w-md text-center"
+          >
+            <Card className="border-0 bg-warm-cream/60 shadow-sm">
+              <CardContent className="flex flex-col items-center gap-4 py-14 text-muted-foreground">
+                Loading your cart…
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : items.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

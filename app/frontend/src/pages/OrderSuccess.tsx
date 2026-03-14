@@ -1,27 +1,57 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { allProducts, formatPrice } from "@/data/mock";
+import { formatPrice } from "@/lib/format";
+import { fetchProducts } from "@/lib/api";
 
-/* mock order items (same as cart) */
-const orderItems = [
-  { productId: "1", quantity: 1 },
-  { productId: "5", quantity: 2 },
-  { productId: "4", quantity: 1 },
-].map((ci) => {
-  const p = allProducts.find((x) => x.id === ci.productId)!;
-  return { ...ci, name: p.name, price: p.price };
-});
+interface OrderItem {
+  productId: string;
+  quantity: number;
+  name: string;
+  price: number;
+}
+
 const DELIVERY_FEE = 1500;
-const subtotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
-const total = subtotal + DELIVERY_FEE;
 
 const OrderSuccess = () => {
   const { id } = useParams<{ id: string }>();
   const orderId = id || "—";
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const products = await fetchProducts({ sort: "popular" });
+        if (!active) return;
+        const seeded: OrderItem[] = products.slice(0, 3).map((p, idx) => ({
+          productId: p.id,
+          quantity: idx === 1 ? 2 : 1,
+          name: p.name,
+          price: p.price,
+        }));
+        setItems(seeded);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load order items");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const total = subtotal + DELIVERY_FEE;
 
   return (
     <section className="flex min-h-[70vh] items-center justify-center px-4 py-16">
@@ -55,14 +85,19 @@ const OrderSuccess = () => {
 
             <Card className="w-full border-0 bg-warm-cream/40 shadow-none">
               <CardContent className="space-y-2 p-4 text-sm">
-                {orderItems.map((item) => (
-                  <div key={item.productId} className="flex justify-between">
-                    <span className="text-foreground">
-                      {item.name} <span className="text-muted-foreground">×{item.quantity}</span>
-                    </span>
-                    <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
-                  </div>
-                ))}
+                {loading && <p className="text-muted-foreground">Preparing your summary…</p>}
+                {!loading && error && (
+                  <p className="text-destructive">{error}</p>
+                )}
+                {!loading && !error &&
+                  items.map((item) => (
+                    <div key={item.productId} className="flex justify-between">
+                      <span className="text-foreground">
+                        {item.name} <span className="text-muted-foreground">×{item.quantity}</span>
+                      </span>
+                      <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
                 <Separator className="my-1" />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Subtotal</span>

@@ -1,22 +1,23 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Minus, Plus, ShieldCheck, RotateCcw, Box, ChevronRight, PackageOpen, ShoppingCart, Eye, Sofa, RotateCw } from "lucide-react";
+import { Minus, Plus, ShieldCheck, RotateCcw, Box, ChevronRight, PackageOpen, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import type { Product } from "@/data/mock";
-import { allProducts, productExtras, formatPrice } from "@/data/mock";
-import ProductCard from "@/components/ProductCard";
+import type { Product } from "@/types/product";
+import { fetchProduct, fetchProducts } from "@/lib/api";
+import { formatPrice } from "@/lib/format";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import QuickViewModal from "@/components/QuickViewModal";
 import { cn } from "@/lib/utils";
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const product = allProducts.find((p) => p.id === id);
-  const extras = id ? productExtras[id] : undefined;
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [activeImage, setActiveImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
@@ -25,10 +26,49 @@ const ProductDetail = () => {
   const [show3dModal, setShow3dModal] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
-  const related = useMemo(
-    () => allProducts.filter((p) => p.id !== id).slice(0, 4),
-    [id]
-  );
+  useEffect(() => {
+    let active = true;
+
+    if (!id) {
+      setError("Product not found");
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    (async () => {
+      try {
+        setLoading(true);
+        const item = await fetchProduct(id);
+        if (!active) return;
+        setProduct(item);
+        const others = await fetchProducts({ sort: "popular" });
+        if (!active) return;
+        setRelated(others.filter((p) => p.id !== id).slice(0, 4));
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load product");
+        setProduct(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <section className="py-20">
+        <div className="container text-center text-muted-foreground">
+          Loading product…
+        </div>
+      </section>
+    );
+  }
 
   if (!product) {
     return (
@@ -38,7 +78,7 @@ const ProductDetail = () => {
             <PackageOpen size={48} strokeWidth={1.5} className="mx-auto text-muted-foreground/50" />
             <h2 className="mt-4 font-display text-2xl font-semibold text-foreground">Product not found</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              The product you're looking for doesn't exist or has been removed.
+              {error || "The product you're looking for doesn't exist or has been removed."}
             </p>
             <Button asChild variant="outline" className="mt-6">
               <Link to="/shop">Back to Shop</Link>
@@ -258,7 +298,7 @@ const ProductDetail = () => {
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-foreground">Description</h3>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                {extras?.longDescription || product.description}
+                {product.longDescription || product.description}
               </p>
             </div>
           </div>
@@ -271,7 +311,7 @@ const ProductDetail = () => {
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-foreground">Dimensions</h3>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                {extras?.dimensions || "Dimensions available upon request."}
+                {product.dimensions || "Dimensions available upon request."}
               </p>
             </div>
           </div>
@@ -284,7 +324,7 @@ const ProductDetail = () => {
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-foreground">Materials & Care</h3>
               <ul className="mt-1 space-y-1">
-                {(extras?.materials || ["Details available upon request."]).map((m, i) => (
+                {(product.materials?.length ? product.materials : ["Details available upon request."]).map((m, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-[hsl(28_35%_32%)]" />
                     {m}

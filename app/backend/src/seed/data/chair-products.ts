@@ -1,43 +1,43 @@
-import midCenturyArmchair1 from "@/assets/products/chairs/mid-century-armchair-1.jpg";
-import midCenturyArmchair2 from "@/assets/products/chairs/mid-century-armchair-2.jpg";
-import midCenturyArmchair3 from "@/assets/products/chairs/mid-century-armchair-3.jpg";
-import velvetWingback1 from "@/assets/products/chairs/velvet-wingback-1.jpg";
-import velvetWingback2 from "@/assets/products/chairs/velvet-wingback-2.jpg";
-import velvetWingback3 from "@/assets/products/chairs/velvet-wingback-3.jpg";
-import rattanPeacock1 from "@/assets/products/chairs/rattan-peacock-1.jpg";
-import rattanPeacock2 from "@/assets/products/chairs/rattan-peacock-2.jpg";
-import rattanPeacock3 from "@/assets/products/chairs/rattan-peacock-3.jpg";
-import scandiOakChair1 from "@/assets/products/chairs/scandi-oak-chair-1.jpg";
-import scandiOakChair2 from "@/assets/products/chairs/scandi-oak-chair-2.jpg";
-import scandiOakChair3 from "@/assets/products/chairs/scandi-oak-chair-3.jpg";
-import leatherButterfly1 from "@/assets/products/chairs/leather-butterfly-1.jpg";
-import leatherButterfly2 from "@/assets/products/chairs/leather-butterfly-2.jpg";
-import leatherButterfly3 from "@/assets/products/chairs/leather-butterfly-3.jpg";
-import boucleSwivel1 from "@/assets/products/chairs/boucle-swivel-1.jpg";
-import boucleSwivel2 from "@/assets/products/chairs/boucle-swivel-2.jpg";
-import boucleSwivel3 from "@/assets/products/chairs/boucle-swivel-3.jpg";
-import windsorChair1 from "@/assets/products/chairs/windsor-chair-1.jpg";
-import windsorChair2 from "@/assets/products/chairs/windsor-chair-2.jpg";
-import windsorChair3 from "@/assets/products/chairs/windsor-chair-3.jpg";
-import loungeOttoman1 from "@/assets/products/chairs/lounge-ottoman-1.jpg";
-import loungeOttoman2 from "@/assets/products/chairs/lounge-ottoman-2.jpg";
-import loungeOttoman3 from "@/assets/products/chairs/lounge-ottoman-3.jpg";
-import ropeOutdoor1 from "@/assets/products/chairs/rope-outdoor-1.jpg";
-import ropeOutdoor2 from "@/assets/products/chairs/rope-outdoor-2.jpg";
-import ropeOutdoor3 from "@/assets/products/chairs/rope-outdoor-3.jpg";
-import ergonomicDesk1 from "@/assets/products/chairs/ergonomic-desk-1.jpg";
-import ergonomicDesk2 from "@/assets/products/chairs/ergonomic-desk-2.jpg";
-import ergonomicDesk3 from "@/assets/products/chairs/ergonomic-desk-3.jpg";
-import tuftedAccent1 from "@/assets/products/chairs/tufted-accent-1.jpg";
-import tuftedAccent2 from "@/assets/products/chairs/tufted-accent-2.jpg";
-import tuftedAccent3 from "@/assets/products/chairs/tufted-accent-3.jpg";
-import caneBackChair1 from "@/assets/products/chairs/cane-back-chair-1.jpg";
-import caneBackChair2 from "@/assets/products/chairs/cane-back-chair-2.jpg";
-import caneBackChair3 from "@/assets/products/chairs/cane-back-chair-3.jpg";
+import { ProductSeed, ProductExtras } from "../types";
 
-import type { Product } from "./mock";
+const midCenturyArmchair1 = "/assets/products/chairs/mid-century-armchair-1.jpg";
+const midCenturyArmchair2 = "/assets/products/chairs/mid-century-armchair-2.jpg";
+const midCenturyArmchair3 = "/assets/products/chairs/mid-century-armchair-3.jpg";
+const velvetWingback1 = "/assets/products/chairs/velvet-wingback-1.jpg";
+const velvetWingback2 = "/assets/products/chairs/velvet-wingback-2.jpg";
+const velvetWingback3 = "/assets/products/chairs/velvet-wingback-3.jpg";
+const rattanPeacock1 = "/assets/products/chairs/rattan-peacock-1.jpg";
+const rattanPeacock2 = "/assets/products/chairs/rattan-peacock-2.jpg";
+const rattanPeacock3 = "/assets/products/chairs/rattan-peacock-3.jpg";
+const scandiOakChair1 = "/assets/products/chairs/scandi-oak-chair-1.jpg";
+const scandiOakChair2 = "/assets/products/chairs/scandi-oak-chair-2.jpg";
+const scandiOakChair3 = "/assets/products/chairs/scandi-oak-chair-3.jpg";
+const leatherButterfly1 = "/assets/products/chairs/leather-butterfly-1.jpg";
+const leatherButterfly2 = "/assets/products/chairs/leather-butterfly-2.jpg";
+const leatherButterfly3 = "/assets/products/chairs/leather-butterfly-3.jpg";
+const boucleSwivel1 = "/assets/products/chairs/boucle-swivel-1.jpg";
+const boucleSwivel2 = "/assets/products/chairs/boucle-swivel-2.jpg";
+const boucleSwivel3 = "/assets/products/chairs/boucle-swivel-3.jpg";
+const windsorChair1 = "/assets/products/chairs/windsor-chair-1.jpg";
+const windsorChair2 = "/assets/products/chairs/windsor-chair-2.jpg";
+const windsorChair3 = "/assets/products/chairs/windsor-chair-3.jpg";
+const loungeOttoman1 = "/assets/products/chairs/lounge-ottoman-1.jpg";
+const loungeOttoman2 = "/assets/products/chairs/lounge-ottoman-2.jpg";
+const loungeOttoman3 = "/assets/products/chairs/lounge-ottoman-3.jpg";
+const ropeOutdoor1 = "/assets/products/chairs/rope-outdoor-1.jpg";
+const ropeOutdoor2 = "/assets/products/chairs/rope-outdoor-2.jpg";
+const ropeOutdoor3 = "/assets/products/chairs/rope-outdoor-3.jpg";
+const ergonomicDesk1 = "/assets/products/chairs/ergonomic-desk-1.jpg";
+const ergonomicDesk2 = "/assets/products/chairs/ergonomic-desk-2.jpg";
+const ergonomicDesk3 = "/assets/products/chairs/ergonomic-desk-3.jpg";
+const tuftedAccent1 = "/assets/products/chairs/tufted-accent-1.jpg";
+const tuftedAccent2 = "/assets/products/chairs/tufted-accent-2.jpg";
+const tuftedAccent3 = "/assets/products/chairs/tufted-accent-3.jpg";
+const caneBackChair1 = "/assets/products/chairs/cane-back-chair-1.jpg";
+const caneBackChair2 = "/assets/products/chairs/cane-back-chair-2.jpg";
+const caneBackChair3 = "/assets/products/chairs/cane-back-chair-3.jpg";
 
-export const chairProducts: Product[] = [
+export const chairProducts: (ProductSeed & { id: string })[] = [
   {
     id: "chair-1",
     name: "Mid-Century Teak Armchair",
@@ -168,7 +168,7 @@ export const chairProducts: Product[] = [
   },
 ];
 
-export const chairProductExtras: Record<string, { longDescription: string; dimensions: string; materials: string[] }> = {
+export const chairProductExtras: ProductExtras = {
   "chair-1": {
     longDescription: "The Mid-Century Teak Armchair is a faithful homage to the golden age of Scandinavian-inspired design. Its angled teak frame cradles a pair of generously padded cushions wrapped in a durable cotton-linen blend. The open-slatted back allows air to circulate, keeping you comfortable even in warm climates. Whether anchoring a conversation area or serving as a reading chair beside a floor lamp, this piece brings warmth, character, and lasting comfort to any room.",
     dimensions: "W 72 cm × D 80 cm × H 82 cm. Seat height: 42 cm.",

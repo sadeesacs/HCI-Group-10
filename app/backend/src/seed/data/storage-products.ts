@@ -1,43 +1,43 @@
-import oakSideboard1 from "@/assets/products/storage/oak-sideboard-1.jpg";
-import oakSideboard2 from "@/assets/products/storage/oak-sideboard-2.jpg";
-import oakSideboard3 from "@/assets/products/storage/oak-sideboard-3.jpg";
-import walnutBookshelf1 from "@/assets/products/storage/walnut-bookshelf-1.jpg";
-import walnutBookshelf2 from "@/assets/products/storage/walnut-bookshelf-2.jpg";
-import walnutBookshelf3 from "@/assets/products/storage/walnut-bookshelf-3.jpg";
-import tvConsole1 from "@/assets/products/storage/tv-console-1.jpg";
-import tvConsole2 from "@/assets/products/storage/tv-console-2.jpg";
-import tvConsole3 from "@/assets/products/storage/tv-console-3.jpg";
-import displayCabinet1 from "@/assets/products/storage/display-cabinet-1.jpg";
-import displayCabinet2 from "@/assets/products/storage/display-cabinet-2.jpg";
-import displayCabinet3 from "@/assets/products/storage/display-cabinet-3.jpg";
-import oakWardrobe1 from "@/assets/products/storage/oak-wardrobe-1.jpg";
-import oakWardrobe2 from "@/assets/products/storage/oak-wardrobe-2.jpg";
-import oakWardrobe3 from "@/assets/products/storage/oak-wardrobe-3.jpg";
-import shoeCabinet1 from "@/assets/products/storage/shoe-cabinet-1.jpg";
-import shoeCabinet2 from "@/assets/products/storage/shoe-cabinet-2.jpg";
-import shoeCabinet3 from "@/assets/products/storage/shoe-cabinet-3.jpg";
-import chestDrawers1 from "@/assets/products/storage/chest-drawers-1.jpg";
-import chestDrawers2 from "@/assets/products/storage/chest-drawers-2.jpg";
-import chestDrawers3 from "@/assets/products/storage/chest-drawers-3.jpg";
-import floatingShelves1 from "@/assets/products/storage/floating-shelves-1.jpg";
-import floatingShelves2 from "@/assets/products/storage/floating-shelves-2.jpg";
-import floatingShelves3 from "@/assets/products/storage/floating-shelves-3.jpg";
-import rattanBuffet1 from "@/assets/products/storage/rattan-buffet-1.jpg";
-import rattanBuffet2 from "@/assets/products/storage/rattan-buffet-2.jpg";
-import rattanBuffet3 from "@/assets/products/storage/rattan-buffet-3.jpg";
-import cubeStorage1 from "@/assets/products/storage/cube-storage-1.jpg";
-import cubeStorage2 from "@/assets/products/storage/cube-storage-2.jpg";
-import cubeStorage3 from "@/assets/products/storage/cube-storage-3.jpg";
-import industrialShelf1 from "@/assets/products/storage/industrial-shelf-1.jpg";
-import industrialShelf2 from "@/assets/products/storage/industrial-shelf-2.jpg";
-import industrialShelf3 from "@/assets/products/storage/industrial-shelf-3.jpg";
-import teakCredenza1 from "@/assets/products/storage/teak-credenza-1.jpg";
-import teakCredenza2 from "@/assets/products/storage/teak-credenza-2.jpg";
-import teakCredenza3 from "@/assets/products/storage/teak-credenza-3.jpg";
+import { ProductSeed, ProductExtras } from "../types";
 
-import type { Product } from "./mock";
+const oakSideboard1 = "/assets/products/storage/oak-sideboard-1.jpg";
+const oakSideboard2 = "/assets/products/storage/oak-sideboard-2.jpg";
+const oakSideboard3 = "/assets/products/storage/oak-sideboard-3.jpg";
+const walnutBookshelf1 = "/assets/products/storage/walnut-bookshelf-1.jpg";
+const walnutBookshelf2 = "/assets/products/storage/walnut-bookshelf-2.jpg";
+const walnutBookshelf3 = "/assets/products/storage/walnut-bookshelf-3.jpg";
+const tvConsole1 = "/assets/products/storage/tv-console-1.jpg";
+const tvConsole2 = "/assets/products/storage/tv-console-2.jpg";
+const tvConsole3 = "/assets/products/storage/tv-console-3.jpg";
+const displayCabinet1 = "/assets/products/storage/display-cabinet-1.jpg";
+const displayCabinet2 = "/assets/products/storage/display-cabinet-2.jpg";
+const displayCabinet3 = "/assets/products/storage/display-cabinet-3.jpg";
+const oakWardrobe1 = "/assets/products/storage/oak-wardrobe-1.jpg";
+const oakWardrobe2 = "/assets/products/storage/oak-wardrobe-2.jpg";
+const oakWardrobe3 = "/assets/products/storage/oak-wardrobe-3.jpg";
+const shoeCabinet1 = "/assets/products/storage/shoe-cabinet-1.jpg";
+const shoeCabinet2 = "/assets/products/storage/shoe-cabinet-2.jpg";
+const shoeCabinet3 = "/assets/products/storage/shoe-cabinet-3.jpg";
+const chestDrawers1 = "/assets/products/storage/chest-drawers-1.jpg";
+const chestDrawers2 = "/assets/products/storage/chest-drawers-2.jpg";
+const chestDrawers3 = "/assets/products/storage/chest-drawers-3.jpg";
+const floatingShelves1 = "/assets/products/storage/floating-shelves-1.jpg";
+const floatingShelves2 = "/assets/products/storage/floating-shelves-2.jpg";
+const floatingShelves3 = "/assets/products/storage/floating-shelves-3.jpg";
+const rattanBuffet1 = "/assets/products/storage/rattan-buffet-1.jpg";
+const rattanBuffet2 = "/assets/products/storage/rattan-buffet-2.jpg";
+const rattanBuffet3 = "/assets/products/storage/rattan-buffet-3.jpg";
+const cubeStorage1 = "/assets/products/storage/cube-storage-1.jpg";
+const cubeStorage2 = "/assets/products/storage/cube-storage-2.jpg";
+const cubeStorage3 = "/assets/products/storage/cube-storage-3.jpg";
+const industrialShelf1 = "/assets/products/storage/industrial-shelf-1.jpg";
+const industrialShelf2 = "/assets/products/storage/industrial-shelf-2.jpg";
+const industrialShelf3 = "/assets/products/storage/industrial-shelf-3.jpg";
+const teakCredenza1 = "/assets/products/storage/teak-credenza-1.jpg";
+const teakCredenza2 = "/assets/products/storage/teak-credenza-2.jpg";
+const teakCredenza3 = "/assets/products/storage/teak-credenza-3.jpg";
 
-export const storageProducts: Product[] = [
+export const storageProducts: (ProductSeed & { id: string })[] = [
   {
     id: "storage-1",
     name: "Modern Oak Sideboard",
@@ -169,7 +169,7 @@ export const storageProducts: Product[] = [
   },
 ];
 
-export const storageProductExtras: Record<string, { longDescription: string; dimensions: string; materials: string[] }> = {
+export const storageProductExtras: ProductExtras = {
   "storage-1": {
     longDescription: "The Modern Oak Sideboard is a versatile centrepiece for dining rooms and living areas alike. Two smooth-gliding sliding doors conceal adjustable interior shelves, letting you customise the space for dinnerware, linens, or media equipment. The solid oak top provides a generous surface for styling with ceramics, lamps, or art. Clean lines and a low-profile silhouette give it a contemporary feel that pairs with virtually any interior style.",
     dimensions: "W 160 cm × D 42 cm × H 78 cm. Interior shelf height: adjustable.",

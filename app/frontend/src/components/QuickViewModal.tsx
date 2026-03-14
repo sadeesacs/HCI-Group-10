@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, ExternalLink } from "lucide-react";
-import type { Product } from "@/data/mock";
-import { formatPrice } from "@/data/mock";
+import type { Product } from "@/types/product";
+import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface QuickViewModalProps {

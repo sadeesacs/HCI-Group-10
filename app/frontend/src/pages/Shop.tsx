@@ -1,12 +1,13 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { PackageOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { allProducts } from "@/data/mock";
+import { fetchProducts } from "@/lib/api";
 import ShopHeroBanner from "@/components/shop/ShopHeroBanner";
 import ShopCategoryCards from "@/components/shop/ShopCategoryCards";
 import ShopFilterBar from "@/components/shop/ShopFilterBar";
 import ShopProductCard from "@/components/shop/ShopProductCard";
+import type { Product } from "@/types/product";
 
 type SortOption = "popular" | "new" | "price-asc" | "price-desc";
 const ITEMS_PER_PAGE = 12;
@@ -18,6 +19,29 @@ const Shop = () => {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await fetchProducts();
+        if (active) setProducts(data);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load products");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const clearFilters = () => {
     setSearch("");
@@ -29,7 +53,7 @@ const Shop = () => {
   const hasFilters = !!(search || selectedCategory || minPrice || maxPrice);
 
   const filtered = useMemo(() => {
-    let items = [...allProducts];
+    let items = [...products];
 
     if (search) {
       const q = search.toLowerCase();
@@ -64,7 +88,12 @@ const Shop = () => {
     }
 
     return items;
-  }, [search, selectedCategory, minPrice, maxPrice, sort]);
+  }, [products, search, selectedCategory, minPrice, maxPrice, sort]);
+
+  const categories = useMemo(
+    () => Array.from(new Set(products.map((p) => p.category))),
+    [products]
+  );
 
   const visibleProducts = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
@@ -106,11 +135,14 @@ const Shop = () => {
               resultCount={filtered.length}
               sort={sort}
               onSortChange={setSort}
+              categories={categories}
             />
           </div>
 
           {/* Product Grid — full width */}
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-center text-muted-foreground">Loading products…</div>
+          ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -122,10 +154,12 @@ const Shop = () => {
                 className="mx-auto text-muted-foreground/50"
               />
               <h3 className="mt-4 font-display text-xl font-semibold text-foreground">
-                No items match your filters
+                {error ? "Could not load products" : "No items match your filters"}
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Try adjusting your search or filter criteria.
+                {error
+                  ? "Please try again later or refresh the page."
+                  : "Try adjusting your search or filter criteria."}
               </p>
               <Button
                 variant="outline"

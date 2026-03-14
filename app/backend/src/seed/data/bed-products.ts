@@ -1,43 +1,43 @@
-import oakPlatformBed1 from "@/assets/products/beds/oak-platform-bed-1.jpg";
-import oakPlatformBed2 from "@/assets/products/beds/oak-platform-bed-2.jpg";
-import oakPlatformBed3 from "@/assets/products/beds/oak-platform-bed-3.jpg";
-import upholsteredPanelBed1 from "@/assets/products/beds/upholstered-panel-bed-1.jpg";
-import upholsteredPanelBed2 from "@/assets/products/beds/upholstered-panel-bed-2.jpg";
-import upholsteredPanelBed3 from "@/assets/products/beds/upholstered-panel-bed-3.jpg";
-import walnutFourPoster1 from "@/assets/products/beds/walnut-four-poster-1.jpg";
-import walnutFourPoster2 from "@/assets/products/beds/walnut-four-poster-2.jpg";
-import walnutFourPoster3 from "@/assets/products/beds/walnut-four-poster-3.jpg";
-import storageLiftBed1 from "@/assets/products/beds/storage-lift-bed-1.jpg";
-import storageLiftBed2 from "@/assets/products/beds/storage-lift-bed-2.jpg";
-import storageLiftBed3 from "@/assets/products/beds/storage-lift-bed-3.jpg";
-import japaneseFloorBed1 from "@/assets/products/beds/japanese-floor-bed-1.jpg";
-import japaneseFloorBed2 from "@/assets/products/beds/japanese-floor-bed-2.jpg";
-import japaneseFloorBed3 from "@/assets/products/beds/japanese-floor-bed-3.jpg";
-import velvetChannelBed1 from "@/assets/products/beds/velvet-channel-bed-1.jpg";
-import velvetChannelBed2 from "@/assets/products/beds/velvet-channel-bed-2.jpg";
-import velvetChannelBed3 from "@/assets/products/beds/velvet-channel-bed-3.jpg";
-import reclaimedWoodBed1 from "@/assets/products/beds/reclaimed-wood-bed-1.jpg";
-import reclaimedWoodBed2 from "@/assets/products/beds/reclaimed-wood-bed-2.jpg";
-import reclaimedWoodBed3 from "@/assets/products/beds/reclaimed-wood-bed-3.jpg";
-import metalCanopyBed1 from "@/assets/products/beds/metal-canopy-bed-1.jpg";
-import metalCanopyBed2 from "@/assets/products/beds/metal-canopy-bed-2.jpg";
-import metalCanopyBed3 from "@/assets/products/beds/metal-canopy-bed-3.jpg";
-import scandiSpindleBed1 from "@/assets/products/beds/scandi-spindle-bed-1.jpg";
-import scandiSpindleBed2 from "@/assets/products/beds/scandi-spindle-bed-2.jpg";
-import scandiSpindleBed3 from "@/assets/products/beds/scandi-spindle-bed-3.jpg";
-import floatingLedBed1 from "@/assets/products/beds/floating-led-bed-1.jpg";
-import floatingLedBed2 from "@/assets/products/beds/floating-led-bed-2.jpg";
-import floatingLedBed3 from "@/assets/products/beds/floating-led-bed-3.jpg";
-import rattanCaneBed1 from "@/assets/products/beds/rattan-cane-bed-1.jpg";
-import rattanCaneBed2 from "@/assets/products/beds/rattan-cane-bed-2.jpg";
-import rattanCaneBed3 from "@/assets/products/beds/rattan-cane-bed-3.jpg";
-import leatherStrapBed1 from "@/assets/products/beds/leather-strap-bed-1.jpg";
-import leatherStrapBed2 from "@/assets/products/beds/leather-strap-bed-2.jpg";
-import leatherStrapBed3 from "@/assets/products/beds/leather-strap-bed-3.jpg";
+import { ProductSeed, ProductExtras } from "../types";
 
-import type { Product } from "./mock";
+const oakPlatformBed1 = "/assets/products/beds/oak-platform-bed-1.jpg";
+const oakPlatformBed2 = "/assets/products/beds/oak-platform-bed-2.jpg";
+const oakPlatformBed3 = "/assets/products/beds/oak-platform-bed-3.jpg";
+const upholsteredPanelBed1 = "/assets/products/beds/upholstered-panel-bed-1.jpg";
+const upholsteredPanelBed2 = "/assets/products/beds/upholstered-panel-bed-2.jpg";
+const upholsteredPanelBed3 = "/assets/products/beds/upholstered-panel-bed-3.jpg";
+const walnutFourPoster1 = "/assets/products/beds/walnut-four-poster-1.jpg";
+const walnutFourPoster2 = "/assets/products/beds/walnut-four-poster-2.jpg";
+const walnutFourPoster3 = "/assets/products/beds/walnut-four-poster-3.jpg";
+const storageLiftBed1 = "/assets/products/beds/storage-lift-bed-1.jpg";
+const storageLiftBed2 = "/assets/products/beds/storage-lift-bed-2.jpg";
+const storageLiftBed3 = "/assets/products/beds/storage-lift-bed-3.jpg";
+const japaneseFloorBed1 = "/assets/products/beds/japanese-floor-bed-1.jpg";
+const japaneseFloorBed2 = "/assets/products/beds/japanese-floor-bed-2.jpg";
+const japaneseFloorBed3 = "/assets/products/beds/japanese-floor-bed-3.jpg";
+const velvetChannelBed1 = "/assets/products/beds/velvet-channel-bed-1.jpg";
+const velvetChannelBed2 = "/assets/products/beds/velvet-channel-bed-2.jpg";
+const velvetChannelBed3 = "/assets/products/beds/velvet-channel-bed-3.jpg";
+const reclaimedWoodBed1 = "/assets/products/beds/reclaimed-wood-bed-1.jpg";
+const reclaimedWoodBed2 = "/assets/products/beds/reclaimed-wood-bed-2.jpg";
+const reclaimedWoodBed3 = "/assets/products/beds/reclaimed-wood-bed-3.jpg";
+const metalCanopyBed1 = "/assets/products/beds/metal-canopy-bed-1.jpg";
+const metalCanopyBed2 = "/assets/products/beds/metal-canopy-bed-2.jpg";
+const metalCanopyBed3 = "/assets/products/beds/metal-canopy-bed-3.jpg";
+const scandiSpindleBed1 = "/assets/products/beds/scandi-spindle-bed-1.jpg";
+const scandiSpindleBed2 = "/assets/products/beds/scandi-spindle-bed-2.jpg";
+const scandiSpindleBed3 = "/assets/products/beds/scandi-spindle-bed-3.jpg";
+const floatingLedBed1 = "/assets/products/beds/floating-led-bed-1.jpg";
+const floatingLedBed2 = "/assets/products/beds/floating-led-bed-2.jpg";
+const floatingLedBed3 = "/assets/products/beds/floating-led-bed-3.jpg";
+const rattanCaneBed1 = "/assets/products/beds/rattan-cane-bed-1.jpg";
+const rattanCaneBed2 = "/assets/products/beds/rattan-cane-bed-2.jpg";
+const rattanCaneBed3 = "/assets/products/beds/rattan-cane-bed-3.jpg";
+const leatherStrapBed1 = "/assets/products/beds/leather-strap-bed-1.jpg";
+const leatherStrapBed2 = "/assets/products/beds/leather-strap-bed-2.jpg";
+const leatherStrapBed3 = "/assets/products/beds/leather-strap-bed-3.jpg";
 
-export const bedProducts: Product[] = [
+export const bedProducts: (ProductSeed & { id: string })[] = [
   {
     id: "b1",
     name: "Modern Oak Platform Bed",
@@ -168,7 +168,7 @@ export const bedProducts: Product[] = [
   },
 ];
 
-export const bedProductExtras: Record<string, { longDescription: string; dimensions: string; materials: string[] }> = {
+export const bedProductExtras: ProductExtras = {
   b1: {
     longDescription: "The Modern Oak Platform Bed strips the bed frame down to its essential elements — a solid slab of European oak, a clean rectangular headboard, and precision-cut slat supports. The result is a bed that feels both substantial and light, grounding the room with warm wood tones while maintaining an open, airy feel. The platform sits at a comfortable height and includes a full-span slat base that eliminates the need for a box spring. Every joint is reinforced with steel brackets for a creak-free sleep.",
     dimensions: "Queen: W 165 cm × L 210 cm × H 85 cm (headboard). King: W 185 cm × L 215 cm. Platform height: 30 cm.",

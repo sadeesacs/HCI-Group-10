@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { Heart, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Product } from "@/data/mock";
-import { formatPrice } from "@/data/mock";
+import type { Product } from "@/types/product";
+import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 

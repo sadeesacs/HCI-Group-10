@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -16,23 +16,25 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { allProducts, formatPrice } from "@/data/mock";
+import { formatPrice } from "@/lib/format";
+import { fetchProducts } from "@/lib/api";
 
-/* ── mock cart ── */
-const cartItems = [
-  { productId: "1", quantity: 1, selectedColor: allProducts[0].colors[0] },
-  { productId: "5", quantity: 2, selectedColor: allProducts[4].colors[0] },
-  { productId: "4", quantity: 1 },
-].map((ci) => {
-  const p = allProducts.find((x) => x.id === ci.productId)!;
-  return { ...ci, name: p.name, price: p.price, image: p.images[0] };
-});
+interface CheckoutItem {
+  productId: string;
+  quantity: number;
+  selectedColor?: string;
+  name: string;
+  price: number;
+  image?: string;
+}
 
 const DELIVERY_FEE = 1500;
-const subtotal = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const [items, setItems] = useState<CheckoutItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState<"delivery" | "pickup">("delivery");
 
   const [contact, setContact] = useState({ name: "", email: "", phone1: "", phone2: "" });
@@ -41,6 +43,36 @@ const Checkout = () => {
   const [confidence, setConfidence] = useState("accurate");
   const [pickupNote, setPickupNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const products = await fetchProducts({ sort: "popular" });
+        if (!active) return;
+        const seeded: CheckoutItem[] = products.slice(0, 3).map((p, idx) => ({
+          productId: p.id,
+          quantity: idx === 1 ? 2 : 1,
+          selectedColor: p.colors[0],
+          name: p.name,
+          price: p.price,
+          image: p.images[0],
+        }));
+        setItems(seeded);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load checkout items");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
   const deliveryTotal = method === "delivery" ? DELIVERY_FEE : 0;
   const total = subtotal + deliveryTotal;
@@ -280,19 +312,27 @@ const Checkout = () => {
                   Order Summary
                 </h3>
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div key={item.productId} className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {item.name}{" "}
-                          <span className="text-muted-foreground font-normal">×{item.quantity}</span>
-                        </p>
+                  {loading && <p className="text-sm text-muted-foreground">Loading items…</p>}
+                  {!loading && error && (
+                    <p className="text-sm text-destructive">{error}</p>
+                  )}
+                  {!loading && !error &&
+                    items.map((item) => (
+                      <div key={item.productId} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {item.name}{" "}
+                            <span className="text-muted-foreground font-normal">×{item.quantity}</span>
+                          </p>
+                        </div>
+                        <span className="flex-shrink-0 text-sm font-medium text-foreground">
+                          {formatPrice(item.price * item.quantity)}
+                        </span>
                       </div>
-                      <span className="flex-shrink-0 text-sm font-medium text-foreground">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  {!loading && !error && items.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Your cart is empty.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

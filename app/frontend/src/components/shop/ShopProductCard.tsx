@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Eye, Heart } from "lucide-react";
-import type { Product } from "@/data/mock";
-import { formatPrice } from "@/data/mock";
+import type { Product } from "@/types/product";
+import { formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
 interface ShopProductCardProps {

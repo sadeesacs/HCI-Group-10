@@ -1,46 +1,46 @@
-import modernOakTable1 from "@/assets/products/dining/modern-oak-table-1.jpg";
-import modernOakTable2 from "@/assets/products/dining/modern-oak-table-2.jpg";
-import modernOakTable3 from "@/assets/products/dining/modern-oak-table-3.jpg";
-import farmhouseTable1 from "@/assets/products/dining/farmhouse-table-1.jpg";
-import farmhouseTable2 from "@/assets/products/dining/farmhouse-table-2.jpg";
-import farmhouseTable3 from "@/assets/products/dining/farmhouse-table-3.jpg";
-import roundWalnutTable1 from "@/assets/products/dining/round-walnut-table-1.jpg";
-import roundWalnutTable2 from "@/assets/products/dining/round-walnut-table-2.jpg";
-import roundWalnutTable3 from "@/assets/products/dining/round-walnut-table-3.jpg";
-import extendableTeakTable1 from "@/assets/products/dining/extendable-teak-table-1.jpg";
-import extendableTeakTable2 from "@/assets/products/dining/extendable-teak-table-2.jpg";
-import extendableTeakTable3 from "@/assets/products/dining/extendable-teak-table-3.jpg";
-import marbleTable1 from "@/assets/products/dining/marble-table-1.jpg";
-import marbleTable2 from "@/assets/products/dining/marble-table-2.jpg";
-import marbleTable3 from "@/assets/products/dining/marble-table-3.jpg";
-import liveEdgeTable1 from "@/assets/products/dining/live-edge-table-1.jpg";
-import liveEdgeTable2 from "@/assets/products/dining/live-edge-table-2.jpg";
-import liveEdgeTable3 from "@/assets/products/dining/live-edge-table-3.jpg";
-import upholsteredChair1 from "@/assets/products/dining/upholstered-chair-1.jpg";
-import upholsteredChair2 from "@/assets/products/dining/upholstered-chair-2.jpg";
-import upholsteredChair3 from "@/assets/products/dining/upholstered-chair-3.jpg";
-import spindleChair1 from "@/assets/products/dining/spindle-chair-1.jpg";
-import spindleChair2 from "@/assets/products/dining/spindle-chair-2.jpg";
-import spindleChair3 from "@/assets/products/dining/spindle-chair-3.jpg";
-import leatherChair1 from "@/assets/products/dining/leather-chair-1.jpg";
-import leatherChair2 from "@/assets/products/dining/leather-chair-2.jpg";
-import leatherChair3 from "@/assets/products/dining/leather-chair-3.jpg";
-import rattanChair1 from "@/assets/products/dining/rattan-chair-1.jpg";
-import rattanChair2 from "@/assets/products/dining/rattan-chair-2.jpg";
-import rattanChair3 from "@/assets/products/dining/rattan-chair-3.jpg";
-import bench1 from "@/assets/products/dining/bench-1.jpg";
-import bench2 from "@/assets/products/dining/bench-2.jpg";
-import bench3 from "@/assets/products/dining/bench-3.jpg";
-import velvetArmchair1 from "@/assets/products/dining/velvet-armchair-1.jpg";
-import velvetArmchair2 from "@/assets/products/dining/velvet-armchair-2.jpg";
-import velvetArmchair3 from "@/assets/products/dining/velvet-armchair-3.jpg";
-import modernChair1 from "@/assets/products/dining/modern-chair-1.jpg";
-import modernChair2 from "@/assets/products/dining/modern-chair-2.jpg";
-import modernChair3 from "@/assets/products/dining/modern-chair-3.jpg";
+import { ProductSeed, ProductExtras } from "../types";
 
-import type { Product } from "./mock";
+const modernOakTable1 = "/assets/products/dining/modern-oak-table-1.jpg";
+const modernOakTable2 = "/assets/products/dining/modern-oak-table-2.jpg";
+const modernOakTable3 = "/assets/products/dining/modern-oak-table-3.jpg";
+const farmhouseTable1 = "/assets/products/dining/farmhouse-table-1.jpg";
+const farmhouseTable2 = "/assets/products/dining/farmhouse-table-2.jpg";
+const farmhouseTable3 = "/assets/products/dining/farmhouse-table-3.jpg";
+const roundWalnutTable1 = "/assets/products/dining/round-walnut-table-1.jpg";
+const roundWalnutTable2 = "/assets/products/dining/round-walnut-table-2.jpg";
+const roundWalnutTable3 = "/assets/products/dining/round-walnut-table-3.jpg";
+const extendableTeakTable1 = "/assets/products/dining/extendable-teak-table-1.jpg";
+const extendableTeakTable2 = "/assets/products/dining/extendable-teak-table-2.jpg";
+const extendableTeakTable3 = "/assets/products/dining/extendable-teak-table-3.jpg";
+const marbleTable1 = "/assets/products/dining/marble-table-1.jpg";
+const marbleTable2 = "/assets/products/dining/marble-table-2.jpg";
+const marbleTable3 = "/assets/products/dining/marble-table-3.jpg";
+const liveEdgeTable1 = "/assets/products/dining/live-edge-table-1.jpg";
+const liveEdgeTable2 = "/assets/products/dining/live-edge-table-2.jpg";
+const liveEdgeTable3 = "/assets/products/dining/live-edge-table-3.jpg";
+const upholsteredChair1 = "/assets/products/dining/upholstered-chair-1.jpg";
+const upholsteredChair2 = "/assets/products/dining/upholstered-chair-2.jpg";
+const upholsteredChair3 = "/assets/products/dining/upholstered-chair-3.jpg";
+const spindleChair1 = "/assets/products/dining/spindle-chair-1.jpg";
+const spindleChair2 = "/assets/products/dining/spindle-chair-2.jpg";
+const spindleChair3 = "/assets/products/dining/spindle-chair-3.jpg";
+const leatherChair1 = "/assets/products/dining/leather-chair-1.jpg";
+const leatherChair2 = "/assets/products/dining/leather-chair-2.jpg";
+const leatherChair3 = "/assets/products/dining/leather-chair-3.jpg";
+const rattanChair1 = "/assets/products/dining/rattan-chair-1.jpg";
+const rattanChair2 = "/assets/products/dining/rattan-chair-2.jpg";
+const rattanChair3 = "/assets/products/dining/rattan-chair-3.jpg";
+const bench1 = "/assets/products/dining/bench-1.jpg";
+const bench2 = "/assets/products/dining/bench-2.jpg";
+const bench3 = "/assets/products/dining/bench-3.jpg";
+const velvetArmchair1 = "/assets/products/dining/velvet-armchair-1.jpg";
+const velvetArmchair2 = "/assets/products/dining/velvet-armchair-2.jpg";
+const velvetArmchair3 = "/assets/products/dining/velvet-armchair-3.jpg";
+const modernChair1 = "/assets/products/dining/modern-chair-1.jpg";
+const modernChair2 = "/assets/products/dining/modern-chair-2.jpg";
+const modernChair3 = "/assets/products/dining/modern-chair-3.jpg";
 
-export const diningProducts: Product[] = [
+export const diningProducts: (ProductSeed & { id: string })[] = [
   {
     id: "d1",
     name: "Modern Oak Dining Table",
@@ -206,15 +206,28 @@ export const diningProducts: Product[] = [
     isNew: true,
     popularity: 85,
   },
+  {
+    id: "d13",
+    name: "Modern Dining Chair",
+    price: 68000,
+    category: "Dining",
+    description: "A modern dining chair in walnut with a curved backrest and slim profile.",
+    longDescription: "The Modern Dining Chair offers a refined silhouette with a gently curved backrest and comfortable seat pad. The walnut finish pairs effortlessly with a wide range of table styles, while the slim metal legs keep the profile light and contemporary.",
+    dimensions: "W 50 cm × D 54 cm × H 84 cm. Seat height: 46 cm.",
+    materials: ["Walnut veneer seat shell", "Powder-coated steel legs", "Foam seat pad", "Protective floor glides"],
+    colors: ["Walnut/Black"],
+    images: [modernChair1, modernChair2, modernChair3],
+    popularity: 70,
+  },
 ];
 
-export const diningProductExtras: Record<string, { longDescription: string; dimensions: string; materials: string[] }> = {};
+export const diningProductExtras: ProductExtras = {};
 diningProducts.forEach((p) => {
   if (p.longDescription && p.dimensions && p.materials) {
     diningProductExtras[p.id] = {
       longDescription: p.longDescription,
       dimensions: p.dimensions,
       materials: p.materials,
-    };
+    } as ProductExtras[string];
   }
 });

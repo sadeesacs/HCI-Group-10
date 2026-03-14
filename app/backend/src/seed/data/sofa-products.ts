@@ -1,43 +1,43 @@
-import modernLinenSofa1 from "@/assets/products/sofas/modern-linen-sofa-1.jpg";
-import modernLinenSofa2 from "@/assets/products/sofas/modern-linen-sofa-2.jpg";
-import modernLinenSofa3 from "@/assets/products/sofas/modern-linen-sofa-3.jpg";
-import curvedVelvetSofa1 from "@/assets/products/sofas/curved-velvet-sofa-1.jpg";
-import curvedVelvetSofa2 from "@/assets/products/sofas/curved-velvet-sofa-2.jpg";
-import curvedVelvetSofa3 from "@/assets/products/sofas/curved-velvet-sofa-3.jpg";
-import chesterfieldSofa1 from "@/assets/products/sofas/chesterfield-sofa-1.jpg";
-import chesterfieldSofa2 from "@/assets/products/sofas/chesterfield-sofa-2.jpg";
-import chesterfieldSofa3 from "@/assets/products/sofas/chesterfield-sofa-3.jpg";
-import modularSectional1 from "@/assets/products/sofas/modular-sectional-1.jpg";
-import modularSectional2 from "@/assets/products/sofas/modular-sectional-2.jpg";
-import modularSectional3 from "@/assets/products/sofas/modular-sectional-3.jpg";
-import midCenturyTeakSofa1 from "@/assets/products/sofas/mid-century-teak-sofa-1.jpg";
-import midCenturyTeakSofa2 from "@/assets/products/sofas/mid-century-teak-sofa-2.jpg";
-import midCenturyTeakSofa3 from "@/assets/products/sofas/mid-century-teak-sofa-3.jpg";
-import boucleCloudSofa1 from "@/assets/products/sofas/boucle-cloud-sofa-1.jpg";
-import boucleCloudSofa2 from "@/assets/products/sofas/boucle-cloud-sofa-2.jpg";
-import boucleCloudSofa3 from "@/assets/products/sofas/boucle-cloud-sofa-3.jpg";
-import minimalistDaybed1 from "@/assets/products/sofas/minimalist-daybed-1.jpg";
-import minimalistDaybed2 from "@/assets/products/sofas/minimalist-daybed-2.jpg";
-import minimalistDaybed3 from "@/assets/products/sofas/minimalist-daybed-3.jpg";
-import compactLoveseat1 from "@/assets/products/sofas/compact-loveseat-1.jpg";
-import compactLoveseat2 from "@/assets/products/sofas/compact-loveseat-2.jpg";
-import compactLoveseat3 from "@/assets/products/sofas/compact-loveseat-3.jpg";
-import tuftedRollArm1 from "@/assets/products/sofas/tufted-roll-arm-1.jpg";
-import tuftedRollArm2 from "@/assets/products/sofas/tufted-roll-arm-2.jpg";
-import tuftedRollArm3 from "@/assets/products/sofas/tufted-roll-arm-3.jpg";
-import lowProfilePlatform1 from "@/assets/products/sofas/low-profile-platform-1.jpg";
-import lowProfilePlatform2 from "@/assets/products/sofas/low-profile-platform-2.jpg";
-import lowProfilePlatform3 from "@/assets/products/sofas/low-profile-platform-3.jpg";
-import scandinavian2Seater1 from "@/assets/products/sofas/scandinavian-2-seater-1.jpg";
-import scandinavian2Seater2 from "@/assets/products/sofas/scandinavian-2-seater-2.jpg";
-import scandinavian2Seater3 from "@/assets/products/sofas/scandinavian-2-seater-3.jpg";
-import deepSeatComfort1 from "@/assets/products/sofas/deep-seat-comfort-1.jpg";
-import deepSeatComfort2 from "@/assets/products/sofas/deep-seat-comfort-2.jpg";
-import deepSeatComfort3 from "@/assets/products/sofas/deep-seat-comfort-3.jpg";
+import { ProductSeed, ProductExtras } from "../types";
 
-import type { Product } from "./mock";
+const modernLinenSofa1 = "/assets/products/sofas/modern-linen-sofa-1.jpg";
+const modernLinenSofa2 = "/assets/products/sofas/modern-linen-sofa-2.jpg";
+const modernLinenSofa3 = "/assets/products/sofas/modern-linen-sofa-3.jpg";
+const curvedVelvetSofa1 = "/assets/products/sofas/curved-velvet-sofa-1.jpg";
+const curvedVelvetSofa2 = "/assets/products/sofas/curved-velvet-sofa-2.jpg";
+const curvedVelvetSofa3 = "/assets/products/sofas/curved-velvet-sofa-3.jpg";
+const chesterfieldSofa1 = "/assets/products/sofas/chesterfield-sofa-1.jpg";
+const chesterfieldSofa2 = "/assets/products/sofas/chesterfield-sofa-2.jpg";
+const chesterfieldSofa3 = "/assets/products/sofas/chesterfield-sofa-3.jpg";
+const modularSectional1 = "/assets/products/sofas/modular-sectional-1.jpg";
+const modularSectional2 = "/assets/products/sofas/modular-sectional-2.jpg";
+const modularSectional3 = "/assets/products/sofas/modular-sectional-3.jpg";
+const midCenturyTeakSofa1 = "/assets/products/sofas/mid-century-teak-sofa-1.jpg";
+const midCenturyTeakSofa2 = "/assets/products/sofas/mid-century-teak-sofa-2.jpg";
+const midCenturyTeakSofa3 = "/assets/products/sofas/mid-century-teak-sofa-3.jpg";
+const boucleCloudSofa1 = "/assets/products/sofas/boucle-cloud-sofa-1.jpg";
+const boucleCloudSofa2 = "/assets/products/sofas/boucle-cloud-sofa-2.jpg";
+const boucleCloudSofa3 = "/assets/products/sofas/boucle-cloud-sofa-3.jpg";
+const minimalistDaybed1 = "/assets/products/sofas/minimalist-daybed-1.jpg";
+const minimalistDaybed2 = "/assets/products/sofas/minimalist-daybed-2.jpg";
+const minimalistDaybed3 = "/assets/products/sofas/minimalist-daybed-3.jpg";
+const compactLoveseat1 = "/assets/products/sofas/compact-loveseat-1.jpg";
+const compactLoveseat2 = "/assets/products/sofas/compact-loveseat-2.jpg";
+const compactLoveseat3 = "/assets/products/sofas/compact-loveseat-3.jpg";
+const tuftedRollArm1 = "/assets/products/sofas/tufted-roll-arm-1.jpg";
+const tuftedRollArm2 = "/assets/products/sofas/tufted-roll-arm-2.jpg";
+const tuftedRollArm3 = "/assets/products/sofas/tufted-roll-arm-3.jpg";
+const lowProfilePlatform1 = "/assets/products/sofas/low-profile-platform-1.jpg";
+const lowProfilePlatform2 = "/assets/products/sofas/low-profile-platform-2.jpg";
+const lowProfilePlatform3 = "/assets/products/sofas/low-profile-platform-3.jpg";
+const scandinavian2Seater1 = "/assets/products/sofas/scandinavian-2-seater-1.jpg";
+const scandinavian2Seater2 = "/assets/products/sofas/scandinavian-2-seater-2.jpg";
+const scandinavian2Seater3 = "/assets/products/sofas/scandinavian-2-seater-3.jpg";
+const deepSeatComfort1 = "/assets/products/sofas/deep-seat-comfort-1.jpg";
+const deepSeatComfort2 = "/assets/products/sofas/deep-seat-comfort-2.jpg";
+const deepSeatComfort3 = "/assets/products/sofas/deep-seat-comfort-3.jpg";
 
-export const sofaProducts: Product[] = [
+export const sofaProducts: (ProductSeed & { id: string })[] = [
   {
     id: "s1",
     name: "Modern Linen 3-Seater Sofa",
@@ -166,7 +166,7 @@ export const sofaProducts: Product[] = [
   },
 ];
 
-export const sofaProductExtras: Record<string, { longDescription: string; dimensions: string; materials: string[] }> = {
+export const sofaProductExtras: ProductExtras = {
   s1: {
     longDescription: "The Modern Linen 3-Seater Sofa is built for everyday living without sacrificing style. Its clean, squared-off silhouette feels contemporary yet approachable, while the tapered solid wood legs add a touch of warmth. The seat cushions are filled with high-resilience foam wrapped in a feather-down top layer, creating a supportive yet sink-in feel. The removable slipcovers make maintenance effortless — simply unzip and machine wash. Whether anchoring a living room or filling a family den, this sofa delivers comfort that lasts.",
     dimensions: "W 220 cm × D 92 cm × H 84 cm. Seat height: 44 cm. Seat depth: 56 cm.",
