@@ -3,7 +3,9 @@ import { Settings, Box, Armchair, Copy, Trash2, RotateCcw, Grid3X3, Magnet, Rule
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import type { PlacedFurniture, RoomConfig } from "./RoomCanvas2D";
+import type { PlacedFurniture } from "./RoomCanvas2D";
+import type { RoomConfig } from "@/types/designer";
+import { getRoomBoundingBox } from "@/lib/room-geometry";
 
 const PRICE_MAP: Record<string, number> = {
   "Nordic Sofa": 128500,
@@ -101,7 +103,9 @@ const PropertiesPanel = ({
 
 /* ── Sub-sections ── */
 
-const DefaultProperties = ({ roomConfig }: { roomConfig: RoomConfig }) => (
+const DefaultProperties = ({ roomConfig }: { roomConfig: RoomConfig }) => {
+  const bbox = getRoomBoundingBox(roomConfig);
+  return (
   <>
     <div className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-accent/30 p-3 text-center">
       <MousePointer size={14} className="text-muted-foreground" />
@@ -113,23 +117,26 @@ const DefaultProperties = ({ roomConfig }: { roomConfig: RoomConfig }) => (
       <div className="space-y-1">
         <PropRow label="Name" value="My Living Room" />
         <PropRow label="Shape" value={roomConfig.shape.replace("-", " ")} capitalize />
-        <PropRow label="Width" value={`${roomConfig.widthM} m`} />
-        <PropRow label="Length" value={`${roomConfig.lengthM} m`} />
+        <PropRow label="Width" value={`${bbox.width.toFixed(1)} m`} />
+        <PropRow label="Length" value={`${bbox.height.toFixed(1)} m`} />
         <ColorRow label="Wall" color={roomConfig.wallColor} />
         <ColorRow label="Floor" color={roomConfig.floorColor} />
       </div>
     </PanelCard>
   </>
-);
+  );
+};
 
-const RoomProperties = ({ roomConfig }: { roomConfig: RoomConfig }) => (
+const RoomProperties = ({ roomConfig }: { roomConfig: RoomConfig }) => {
+  const bbox = getRoomBoundingBox(roomConfig);
+  return (
   <>
     <PanelCard icon={<Box size={13} />} title="Room Details">
       <div className="space-y-1">
         <EditableRow label="Name" value="My Living Room" />
         <PropRow label="Shape" value={roomConfig.shape.replace("-", " ")} capitalize />
-        <EditableRow label="Width" value={`${roomConfig.widthM}`} suffix="m" />
-        <EditableRow label="Length" value={`${roomConfig.lengthM}`} suffix="m" />
+        <EditableRow label="Width" value={`${bbox.width.toFixed(1)}`} suffix="m" />
+        <EditableRow label="Length" value={`${bbox.height.toFixed(1)}`} suffix="m" />
       </div>
     </PanelCard>
     <PanelCard icon={<Grid3X3 size={13} />} title="View">
@@ -140,7 +147,8 @@ const RoomProperties = ({ roomConfig }: { roomConfig: RoomConfig }) => (
       </div>
     </PanelCard>
   </>
-);
+  );
+};
 
 const FurnitureProperties = ({
   item, onDuplicate, onDelete, onReset, onUpdate,
