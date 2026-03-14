@@ -14,15 +14,49 @@ const navLinks = [
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authUser, setAuthUser] = useState<{ name?: string; email: string } | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === "/";
+
+  const syncAuthUser = () => {
+    const raw = localStorage.getItem("authUser");
+    try {
+      const parsed = raw ? JSON.parse(raw) : null;
+      setAuthUser(parsed);
+    } catch {
+      setAuthUser(null);
+    }
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    syncAuthUser();
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "authUser") {
+        syncAuthUser();
+      }
+    };
+
+    const onAuthChanged = () => syncAuthUser();
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("auth-changed", onAuthChanged as EventListener);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("auth-changed", onAuthChanged as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    syncAuthUser();
+  }, [location.pathname]);
 
   const isTransparent = isHome && !scrolled;
 
@@ -67,28 +101,47 @@ const Header = () => {
         <div className="flex items-center gap-2 lg:gap-3">
           {/* Auth — desktop */}
           <div className="hidden items-center gap-1 lg:flex">
-            <Link
-              to="/login"
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] font-semibold tracking-wide transition-colors duration-300 ${
-                isTransparent
-                  ? "text-white/95 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
-                  : "text-foreground/70 hover:text-foreground hover:bg-accent"
-              }`}
-            >
-              <User size={14} />
-              Login
-            </Link>
-            <span className={`text-xs ${isTransparent ? "text-white/25" : "text-border"}`}>|</span>
-            <Link
-              to="/register"
-              className={`rounded-md px-2.5 py-1.5 text-[13px] font-semibold tracking-wide transition-colors duration-300 ${
-                isTransparent
-                  ? "text-white/95 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
-                  : "text-foreground/70 hover:text-foreground hover:bg-accent"
-              }`}
-            >
-              Register
-            </Link>
+            {authUser ? (
+              <Link
+                to="/"
+                className={`flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px] font-semibold tracking-wide transition-colors duration-300 ${
+                  isTransparent
+                    ? "text-white/95 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
+                    : "text-foreground/70 hover:text-foreground hover:bg-accent"
+                }`}
+                aria-label="Profile"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(28_35%_32%)] text-white text-sm font-semibold">
+                  <User size={16} />
+                </span>
+                <span className="truncate max-w-[120px] text-left">{authUser.name || authUser.email}</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] font-semibold tracking-wide transition-colors duration-300 ${
+                    isTransparent
+                      ? "text-white/95 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
+                      : "text-foreground/70 hover:text-foreground hover:bg-accent"
+                  }`}
+                >
+                  <User size={14} />
+                  Login
+                </Link>
+                <span className={`text-xs ${isTransparent ? "text-white/25" : "text-border"}`}>|</span>
+                <Link
+                  to="/register"
+                  className={`rounded-md px-2.5 py-1.5 text-[13px] font-semibold tracking-wide transition-colors duration-300 ${
+                    isTransparent
+                      ? "text-white/95 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
+                      : "text-foreground/70 hover:text-foreground hover:bg-accent"
+                  }`}
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Cart */}
@@ -150,12 +203,24 @@ const Header = () => {
               Try in Your Room
             </Button>
             <div className="mt-2 flex gap-2">
-              <Button asChild variant="outline" size="sm" className="flex-1">
-                <Link to="/login" onClick={() => setMobileOpen(false)}>Login</Link>
-              </Button>
-              <Button asChild size="sm" className="flex-1 bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white">
-                <Link to="/register" onClick={() => setMobileOpen(false)}>Register</Link>
-              </Button>
+              {authUser ? (
+                <Button
+                  onClick={() => { navigate("/"); setMobileOpen(false); }}
+                  size="sm"
+                  className="flex-1 bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white"
+                >
+                  <User size={14} className="mr-2" /> Profile
+                </Button>
+              ) : (
+                <>
+                  <Button asChild variant="outline" size="sm" className="flex-1">
+                    <Link to="/login" onClick={() => setMobileOpen(false)}>Login</Link>
+                  </Button>
+                  <Button asChild size="sm" className="flex-1 bg-[hsl(28_35%_32%)] hover:bg-[hsl(28_35%_26%)] text-white">
+                    <Link to="/register" onClick={() => setMobileOpen(false)}>Register</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </div>

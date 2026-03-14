@@ -22,6 +22,7 @@ const Login = () => {
       const result = await loginUser({ email, password });
       localStorage.setItem("authToken", result.token);
       localStorage.setItem("authUser", JSON.stringify(result.user));
+      window.dispatchEvent(new Event("auth-changed"));
       toast.success("Logged in successfully");
       navigate("/");
     } catch (err) {

@@ -12,6 +12,7 @@ const Register = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -27,14 +28,20 @@ const Register = () => {
     if (Object.keys(errs).length) return;
 
     setLoading(true);
+    setSubmitError(null);
     try {
       const result = await registerUser({ name: form.name.trim(), email: form.email.trim(), password: form.password });
       localStorage.setItem("authToken", result.token);
       localStorage.setItem("authUser", JSON.stringify(result.user));
+      window.dispatchEvent(new Event("auth-changed"));
       toast.success("Account created successfully");
       navigate("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create account";
+      setSubmitError(message);
+      if (message.toLowerCase().includes("already")) {
+        setErrors((prev) => ({ ...prev, email: "Email already registered" }));
+      }
       toast.error(message);
     } finally {
       setLoading(false);
@@ -114,6 +121,11 @@ const Register = () => {
             >
               <UserPlus className="h-4 w-4" /> {loading ? "Creating..." : "Create account"}
             </Button>
+            {submitError && (
+              <p className="text-xs text-destructive text-center" role="alert" aria-live="assertive">
+                {submitError}
+              </p>
+            )}
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
