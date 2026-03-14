@@ -13,6 +13,7 @@ export interface OrderItem {
 
 export interface IOrder {
   orderNumber: string;
+  userId?: string;
   customer: {
     name: string;
     email: string;
@@ -20,8 +21,14 @@ export interface IOrder {
   };
   shippingAddress: {
     line1: string;
+    line2?: string;
     city: string;
     postalCode: string;
+    notes?: string;
+    location: {
+      lat: number;
+      lng: number;
+    };
   };
   items: OrderItem[];
   subtotal: number;
@@ -50,6 +57,7 @@ const orderItemSchema = new Schema<OrderItem>(
 const orderSchema = new Schema<IOrderDocument>(
   {
     orderNumber: { type: String, required: true, unique: true },
+    userId: { type: String },
     customer: {
       name: { type: String, required: true, trim: true },
       email: { type: String, required: true, trim: true },
@@ -57,8 +65,14 @@ const orderSchema = new Schema<IOrderDocument>(
     },
     shippingAddress: {
       line1: { type: String, required: true, trim: true },
+      line2: { type: String, trim: true },
       city: { type: String, required: true, trim: true },
       postalCode: { type: String, required: true, trim: true },
+      notes: { type: String, trim: true },
+      location: {
+        lat: { type: Number, required: true },
+        lng: { type: Number, required: true },
+      },
     },
     items: { type: [orderItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },

@@ -1,14 +1,19 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   ChevronRight,
+  CreditCard,
   MapPin,
   Navigation,
   ShieldCheck,
   Store,
   Truck,
+  Wallet,
 } from "lucide-react";
+import { MapContainer, Marker, TileLayer, useMapEvents } from "react-leaflet";
+import L, { type LatLngExpression } from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,8 +21,12 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useCart } from "@/hooks/use-cart";
+import { createCheckout, fetchProduct } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
-import { fetchProducts } from "@/lib/api";
+import { toast } from "sonner";
+
+type PaymentMethod = "cash-on-delivery" | "online-mock";
 
 interface CheckoutItem {
   productId: string;
@@ -29,39 +38,101 @@ interface CheckoutItem {
 }
 
 const DELIVERY_FEE = 1500;
+const SHOWROOM_LOCATION = { lat: 6.9271, lng: 79.8612 };
+const MAP_DEFAULT: LatLngExpression = [SHOWROOM_LOCATION.lat, SHOWROOM_LOCATION.lng];
+
+const markerIcon = L.icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const cart = useCart();
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState<"delivery" | "pickup">("delivery");
-
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash-on-delivery");
   const [contact, setContact] = useState({ name: "", email: "", phone1: "", phone2: "" });
   const [address, setAddress] = useState({ line1: "", line2: "", city: "", postal: "", notes: "" });
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [confidence, setConfidence] = useState("accurate");
   const [pickupNote, setPickupNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [user, setUser] = useState<{ id: string; name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    const readUser = () => {
+      try {
+        const raw = localStorage.getItem("authUser");
+        if (!raw) {
+          setUser(null);
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        setUser(parsed);
+      } catch {
+        setUser(null);
+      }
+    };
+    readUser();
+    const handler = () => readUser();
+    window.addEventListener("auth-changed", handler);
+    return () => window.removeEventListener("auth-changed", handler);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setContact((prev) => ({
+        ...prev,
+        name: prev.name || user.name,
+        email: prev.email || user.email,
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const products = await fetchProducts({ sort: "popular" });
+        if (cart.entries.length === 0) {
+          setItems([]);
+          return;
+        }
+
+        const uniqueIds = Array.from(new Set(cart.entries.map((e) => e.productId)));
+        const products = await Promise.all(uniqueIds.map((id) => fetchProduct(id)));
         if (!active) return;
-        const seeded: CheckoutItem[] = products.slice(0, 3).map((p, idx) => ({
-          productId: p.id,
-          quantity: idx === 1 ? 2 : 1,
-          selectedColor: p.colors[0],
-          name: p.name,
-          price: p.price,
-          image: p.images[0],
-        }));
-        setItems(seeded);
+
+        const map = new Map(products.map((p) => [p.id, p]));
+        const enriched = cart.entries
+          .map((entry) => {
+            const product = map.get(entry.productId);
+            if (!product) return null;
+            return {
+              productId: entry.productId,
+              quantity: entry.quantity,
+              selectedColor: entry.selectedColor,
+              name: product.name,
+              price: product.price,
+              image: product.images[0],
+            } as CheckoutItem;
+          })
+          .filter(Boolean) as CheckoutItem[];
+
+        setItems(enriched);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load checkout items");
+        setError(err instanceof Error ? err.message : "Failed to load cart items");
       } finally {
         if (active) setLoading(false);
       }
@@ -70,10 +141,9 @@ const Checkout = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [cart.entries]);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-
   const deliveryTotal = method === "delivery" ? DELIVERY_FEE : 0;
   const total = subtotal + deliveryTotal;
 
@@ -86,19 +156,76 @@ const Checkout = () => {
     if (!contact.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email))
       e.email = "Valid email required";
     if (!contact.phone1.trim()) e.phone1 = "Required";
+    if (items.length === 0) e.items = "Your cart is empty";
+
     if (method === "delivery") {
       if (!address.line1.trim()) e.line1 = "Required";
       if (!address.city.trim()) e.city = "Required";
       if (!address.postal.trim()) e.postal = "Required";
+      if (!pin) e.pin = "Pin your delivery location";
     }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const placeOrder = () => {
+  const buildShipping = () => {
+    const baseNotes = address.notes.trim();
+    const confidenceNote = confidence === "not-sure" ? "Pin accuracy: unsure" : "";
+    const noteParts = [baseNotes, confidenceNote].filter(Boolean);
+
+    if (method === "pickup") {
+      if (pickupNote.trim()) noteParts.push(`Pickup note: ${pickupNote.trim()}`);
+      return {
+        line1: "Pickup - Casa Ceylon Showroom",
+        line2: "42 Galle Road",
+        city: "Colombo 03",
+        postalCode: "00003",
+        notes: noteParts.join(" | ") || undefined,
+        location: SHOWROOM_LOCATION,
+      };
+    }
+
+    return {
+      line1: address.line1.trim(),
+      line2: address.line2.trim() || undefined,
+      city: address.city.trim(),
+      postalCode: address.postal.trim(),
+      notes: noteParts.join(" | ") || undefined,
+      location: pin!,
+    };
+  };
+
+  const placeOrder = async () => {
     if (!validate()) return;
-    const id = Math.random().toString(36).slice(2, 10);
-    navigate(`/order-success/${id}`);
+    setSubmitting(true);
+    try {
+      const payload = {
+        customer: {
+          name: contact.name.trim(),
+          email: contact.email.trim(),
+          phone: contact.phone1.trim(),
+        },
+        shippingAddress: buildShipping(),
+        items: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          selectedColor: item.selectedColor,
+        })),
+        paymentMethod,
+        userId: user?.id,
+      };
+
+      const { order } = await createCheckout(payload);
+      cart.clear();
+      sessionStorage.setItem(`order-${order.orderNumber}`, JSON.stringify(order));
+      navigate(`/order-success/${order.orderNumber}`, { state: { order } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to place order";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -193,6 +320,46 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
+            {/* Payment Method */}
+            <Card className="border shadow-sm">
+              <CardContent className="p-6">
+                <h2 className="font-display text-lg font-semibold text-foreground mb-5">
+                  Payment Method
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {["cash-on-delivery", "online-mock"].map((methodKey) => {
+                    const selected = paymentMethod === methodKey;
+                    const isCash = methodKey === "cash-on-delivery";
+                    return (
+                      <button
+                        key={methodKey}
+                        onClick={() => setPaymentMethod(methodKey as PaymentMethod)}
+                        className={`flex items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
+                          selected
+                            ? "border-warm-walnut bg-warm-cream"
+                            : "border-border bg-background hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <div className="mt-0.5">
+                          {isCash ? <Wallet className="h-5 w-5 text-warm-walnut" /> : <CreditCard className="h-5 w-5 text-warm-walnut" />}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">
+                            {isCash ? "Cash on Delivery" : "Online"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {isCash
+                              ? "Pay with cash or card when your order arrives."
+                              : "Simulated online payment for testing."}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Delivery Address / Pickup Details Card */}
             {method === "delivery" ? (
               <Card className="border shadow-sm">
@@ -243,15 +410,14 @@ const Checkout = () => {
                     </Field>
                   </div>
 
-                  {/* Map */}
-                  <div className="mt-6">
-                    <Label className="mb-2 block text-sm font-medium">
-                      Pin your location on the map
+                  <div className="mt-6 space-y-2">
+                    <Label className="block text-sm font-medium flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-warm-walnut" /> Pin your location on the map
                     </Label>
-                    <LeafletMap pin={pin} setPin={setPin} />
+                    <LeafletMap pin={pin} setPin={setPin} error={errors.pin} />
+                    {errors.pin && <p className="text-xs text-destructive">{errors.pin}</p>}
                   </div>
 
-                  {/* Confidence */}
                   <div className="mt-5">
                     <Label className="mb-2 block text-sm font-medium">
                       How accurate is this pin?
@@ -305,7 +471,6 @@ const Checkout = () => {
 
           {/* ── RIGHT COLUMN: Order Summary ── */}
           <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            {/* Items */}
             <Card className="border shadow-sm">
               <CardContent className="p-6">
                 <h3 className="font-display text-lg font-semibold text-foreground mb-4">
@@ -313,17 +478,18 @@ const Checkout = () => {
                 </h3>
                 <div className="space-y-4">
                   {loading && <p className="text-sm text-muted-foreground">Loading items…</p>}
-                  {!loading && error && (
-                    <p className="text-sm text-destructive">{error}</p>
-                  )}
+                  {!loading && error && <p className="text-sm text-destructive">{error}</p>}
                   {!loading && !error &&
                     items.map((item) => (
-                      <div key={item.productId} className="flex items-start justify-between gap-3">
+                      <div key={`${item.productId}-${item.selectedColor ?? "-"}`} className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground">
                             {item.name}{" "}
                             <span className="text-muted-foreground font-normal">×{item.quantity}</span>
                           </p>
+                          {item.selectedColor && (
+                            <p className="text-[11px] text-muted-foreground">Color: {item.selectedColor}</p>
+                          )}
                         </div>
                         <span className="flex-shrink-0 text-sm font-medium text-foreground">
                           {formatPrice(item.price * item.quantity)}
@@ -337,7 +503,6 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
-            {/* Totals + Place Order */}
             <Card className="border shadow-sm">
               <CardContent className="p-6 space-y-3">
                 <div className="flex justify-between text-sm">
@@ -362,8 +527,9 @@ const Checkout = () => {
                   size="lg"
                   className="w-full mt-2 bg-warm-walnut hover:bg-warm-walnut-dark text-white"
                   onClick={placeOrder}
+                  disabled={submitting || loading}
                 >
-                  Place Order
+                  {submitting ? "Placing order…" : "Place Order"}
                 </Button>
 
                 <p className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground/60">
@@ -391,7 +557,7 @@ const Field = ({
   error?: string;
   full?: boolean;
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) => (
   <div className={`${full ? "sm:col-span-2" : ""} ${className ?? ""}`}>
     <Label className="mb-1.5 block text-sm font-medium">{label}</Label>
@@ -400,67 +566,42 @@ const Field = ({
   </div>
 );
 
-/* ── Static Map Placeholder ── */
-function LeafletMap({
+const MapClickHandler = ({ onSelect }: { onSelect: (pos: { lat: number; lng: number }) => void }) => {
+  useMapEvents({
+    click(e) {
+      onSelect({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+};
+
+const LeafletMap = ({
   pin,
   setPin,
+  error,
 }: {
   pin: { lat: number; lng: number } | null;
-  setPin: (p: { lat: number; lng: number }) => void;
-}) {
-  const geolocate = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      setPin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-    });
-  };
-
-  const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    const lat = 7.1 - y * 0.4;
-    const lng = 79.7 + x * 0.4;
-    setPin({ lat, lng });
-  };
+  setPin: (pos: { lat: number; lng: number }) => void;
+  error?: string;
+}) => {
+  const center: LatLngExpression = pin ? [pin.lat, pin.lng] : MAP_DEFAULT;
 
   return (
-    <div className="space-y-2">
-      <div
-        onClick={handleMapClick}
-        className="relative flex h-[280px] cursor-crosshair items-center justify-center overflow-hidden rounded-xl border border-border bg-secondary/50 shadow-sm"
-      >
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <MapPin className="h-8 w-8" />
-          <span className="text-sm font-medium">Click to drop a pin on the map</span>
-          <span className="text-xs">Colombo area</span>
-        </div>
-        {pin && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex flex-col items-center">
-              <MapPin className="h-8 w-8 text-warm-walnut fill-warm-walnut/20" />
-              <span className="mt-1 rounded bg-background/90 px-2 py-0.5 text-xs font-medium shadow-sm">
-                {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="flex items-center justify-between">
-        {pin ? (
-          <p className="text-xs text-muted-foreground">
-            <MapPin className="mr-1 inline h-3 w-3" />
-            {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">Click the map to drop a pin.</p>
-        )}
-        <Button type="button" variant="outline" size="sm" onClick={geolocate} className="gap-1 text-xs">
-          <Navigation className="h-3 w-3" /> Use my location
-        </Button>
+    <div className="overflow-hidden rounded-lg border border-border">
+      <MapContainer center={center} zoom={13} className="h-64 w-full" scrollWheelZoom>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapClickHandler onSelect={setPin} />
+        {pin && <Marker position={[pin.lat, pin.lng]} icon={markerIcon} />} 
+      </MapContainer>
+      <div className={`flex items-center gap-2 px-3 py-2 text-xs ${error ? "text-destructive" : "text-muted-foreground"}`}>
+        <Navigation className="h-3.5 w-3.5" />
+        <span>{pin ? `Pinned at ${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)}` : "Tap on the map to drop a pin"}</span>
       </div>
     </div>
   );
-}
+};
 
 export default Checkout;

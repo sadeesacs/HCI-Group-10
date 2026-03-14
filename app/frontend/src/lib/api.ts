@@ -15,6 +15,52 @@ export type AuthResponse = {
   token: string;
 };
 
+export type OrderItem = {
+  productId: string;
+  quantity: number;
+  name: string;
+  price: number;
+  selectedColor?: string;
+};
+
+export type Order = {
+  id: string;
+  orderNumber: string;
+  userId?: string;
+  customer: { name: string; email: string; phone: string };
+  shippingAddress: {
+    line1: string;
+    line2?: string;
+    city: string;
+    postalCode: string;
+    notes?: string;
+    location: { lat: number; lng: number };
+  };
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  paymentMethod: "cash-on-delivery" | "online-mock";
+  status: "placed" | "paid" | "cancelled";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CheckoutPayload = {
+  customer: { name: string; email: string; phone: string };
+  shippingAddress: {
+    line1: string;
+    line2?: string;
+    city: string;
+    postalCode: string;
+    notes?: string;
+    location: { lat: number; lng: number };
+  };
+  items: Array<{ productId: string; quantity: number; selectedColor?: string }>;
+  paymentMethod: "cash-on-delivery" | "online-mock";
+  userId?: string;
+};
+
 function buildUrl(path: string, params?: Record<string, unknown>): URL {
   const base = API_BASE.endsWith("/") ? API_BASE : `${API_BASE}/`;
   const normalizedPath = path.replace(/^\//, "");
@@ -35,7 +81,7 @@ async function requestJson<T>(
   options: {
     method?: "GET" | "POST";
     params?: Record<string, unknown>;
-    body?: Record<string, unknown>;
+    body?: Record<string, unknown> | Array<unknown>;
   } = {}
 ): Promise<T> {
   const { method = "GET", params, body } = options;
@@ -76,4 +122,12 @@ export async function registerUser(payload: {
 
 export async function loginUser(payload: { email: string; password: string }): Promise<AuthResponse> {
   return requestJson<AuthResponse>("/auth/login", { method: "POST", body: payload });
+}
+
+export async function createCheckout(payload: CheckoutPayload): Promise<{ order: Order; message: string }> {
+  return requestJson<{ order: Order; message: string }>("/checkout", { method: "POST", body: payload });
+}
+
+export async function fetchOrder(orderNumber: string): Promise<{ order: Order }> {
+  return requestJson<{ order: Order }>(`/checkout/${orderNumber}`);
 }
