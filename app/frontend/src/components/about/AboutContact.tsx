@@ -147,6 +147,16 @@ const AboutContact = () => {
                       {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
                     </div>
                     <div>
+                      <Label className="mb-1.5 block text-sm font-medium">Phone *</Label>
+                      <Input
+                        value={form.phone}
+                        onChange={(e) => handleFieldChange("phone", e.target.value)}
+                        className={errors.phone ? "border-destructive" : ""}
+                        maxLength={10}
+                      />
+                      {errors.phone && <p className="mt-1 text-xs text-destructive">{errors.phone}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
                       <Label className="mb-1.5 block text-sm font-medium">Email *</Label>
                       <Input
                         type="email"
@@ -156,16 +166,6 @@ const AboutContact = () => {
                         maxLength={255}
                       />
                       {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block text-sm font-medium">Phone *</Label>
-                      <Input
-                        value={form.phone}
-                        onChange={(e) => handleFieldChange("phone", e.target.value)}
-                        className={errors.phone ? "border-destructive" : ""}
-                        maxLength={10}
-                      />
-                      {errors.phone && <p className="mt-1 text-xs text-destructive">{errors.phone}</p>}
                     </div>
                   </div>
                   <div>
