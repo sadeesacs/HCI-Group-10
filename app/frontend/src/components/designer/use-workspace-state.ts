@@ -172,6 +172,16 @@ export function useWorkspaceState() {
     });
   }, [markDirty, pushHistory]);
 
+  const addFurniture = useCallback((item: PlacedFurniture) => {
+    setFurniture((prev) => {
+      const next = [...prev, item];
+      pushHistory(next);
+      return next;
+    });
+    setSelectedId(item.id);
+    markDirty();
+  }, [pushHistory, markDirty]);
+
   return {
     viewMode, setViewMode,
     furniture, selectedId, setSelectedId, selectedItem,
@@ -180,6 +190,6 @@ export function useWorkspaceState() {
     canUndo, canRedo, handleUndo, handleRedo,
     handleFurnitureUpdate, handleRotate, handleDuplicate,
     requestDelete, deleteConfirm, confirmDelete, cancelDelete,
-    handleReset, handleSave, loadDesign,
+    handleReset, handleSave, loadDesign, addFurniture,
   };
 }

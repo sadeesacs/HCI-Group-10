@@ -4,7 +4,34 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { fetchProducts } from "@/lib/api";
 import type { Product } from "@/types/product";
+import type { PlacedFurniture } from "@/components/designer/RoomCanvas2D";
 
+/* ─── Local furniture catalog (GLB-backed items) ─── */
+export interface DragFurnitureTemplate {
+  name: string;
+  widthM: number;
+  depthM: number;
+  color: string;
+  glbPath: string;
+  label: string;
+}
+
+const LOCAL_CATALOG: Array<DragFurnitureTemplate & { id: string; image: string; price?: number; category: string }> = [
+  {
+    id: "kandy-lounge-chair",
+    name: "Kandy Lounge Chair",
+    category: "Seating",
+    widthM: 0.8,
+    depthM: 0.85,
+    color: "#D4B896",
+    glbPath: "/models/Meshy_AI_Beige_Mid_Century_Arm_0314104541_generate.glb",
+    label: "Kandy",
+    image: "/assets/products/chairs/mid-century-armchair-1.jpg",
+    price: 45000,
+  },
+];
+
+const PX_PER_M_BASE = 120; // matches Room3DPreview constant
 const CATEGORY_ICONS: Record<string, ComponentType<{ size?: number; strokeWidth?: number }>> = {
   Sofas: Sofa,
   Seating: Armchair,
@@ -22,7 +49,11 @@ const formatPrice = (value: number) =>
 
 const getImage = (product: Product) => product.images?.[0] ?? "/assets/products/chair-1.jpg";
 
-const FurnitureLibraryPanel = () => {
+interface FurnitureLibraryPanelProps {
+  onAddFurniture?: (item: PlacedFurniture) => void;
+}
+
+const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
@@ -63,6 +94,40 @@ const FurnitureLibraryPanel = () => {
     toast.success(`${item.name} added to room`, { description });
   };
 
+  const handleDragStart = (e: React.DragEvent, item: DragFurnitureTemplate) => {
+    const payload: DragFurnitureTemplate = {
+      name: item.name,
+      widthM: item.widthM,
+      depthM: item.depthM,
+      color: item.color,
+      glbPath: item.glbPath,
+      label: item.label,
+    };
+    e.dataTransfer.setData("application/furniture", JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleLocalAdd = (item: typeof LOCAL_CATALOG[0]) => {
+    if (!onAddFurniture) return;
+    const w = Math.round(item.widthM * PX_PER_M_BASE);
+    const h = Math.round(item.depthM * PX_PER_M_BASE);
+    onAddFurniture({
+      id: `p${Date.now()}`,
+      name: item.name,
+      x: 60,
+      y: 60,
+      width: w,
+      height: h,
+      rotation: 0,
+      color: item.color,
+      label: item.label,
+      glbPath: item.glbPath,
+    });
+    toast.success(`${item.name} added to room`, {
+      description: item.price ? formatPrice(item.price) : undefined,
+    });
+  };
+
   return (
     <div className="rounded-lg border border-border bg-background">
       {/* Header */}
@@ -72,6 +137,47 @@ const FurnitureLibraryPanel = () => {
       </div>
 
       <div className="border-t border-border px-3 pb-3 pt-2.5">
+                {/* ── Local Seating Section (GLB models) ── */}
+                <div className="mb-4">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Featured</p>
+                  {LOCAL_CATALOG.map((item) => (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      className="group flex gap-2 rounded-md border border-[hsl(28,35%,32%)/30] bg-[hsl(28,35%,32%)/5] p-1.5 transition-all hover:bg-accent/50 hover:shadow-sm cursor-grab active:cursor-grabbing"
+                      title="Drag into the room canvas to place"
+                    >
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-accent">
+                        <img src={item.image} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
+                      </div>
+                      <div className="flex flex-1 flex-col justify-between min-w-0 py-0.5">
+                        <div>
+                          <p className="truncate text-[11px] font-medium text-foreground leading-tight">{item.name}</p>
+                          {item.price && (
+                            <p className="text-[10px] text-muted-foreground">{formatPrice(item.price)}</p>
+                          )}
+                          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+                            {item.widthM * 100}cm × {item.depthM * 100}cm · 3D model
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleLocalAdd(item)}
+                          disabled={!onAddFurniture}
+                          className="h-5 w-full gap-1 text-[9px] font-medium rounded bg-[hsl(28,35%,32%)] text-white hover:bg-[hsl(28,35%,26%)]"
+                        >
+                          <Plus size={8} strokeWidth={2.5} />Add to Room
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mb-3 border-t border-border pt-3">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Catalogue</p>
+                </div>
+
         {/* Category chips */}
         <div className="mb-3 flex flex-wrap gap-1">
           {categories.map((name) => {

@@ -19,6 +19,7 @@ interface WorkspaceCenterProps {
   handleReset: () => void;
   designName?: string;
   onRoomConfigChange?: (config: RoomConfig) => void;
+  onDropFurniture?: (item: PlacedFurniture) => void;
 }
 
 const WorkspaceCenter = ({
@@ -28,6 +29,7 @@ const WorkspaceCenter = ({
   handleFurnitureUpdate, handleRotate, handleDuplicate, requestDelete, handleReset,
   designName,
   onRoomConfigChange,
+  onDropFurniture,
 }: WorkspaceCenterProps) => {
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-[hsl(0,0%,96%)]">
@@ -73,6 +75,7 @@ const WorkspaceCenter = ({
             onSelect={setSelectedId}
             onFurnitureUpdate={handleFurnitureUpdate}
             onRoomConfigChange={onRoomConfigChange}
+            onDropFurniture={onDropFurniture}
           />
         ) : (
           <Room3DPreview roomConfig={roomConfig} furniture={furniture} />

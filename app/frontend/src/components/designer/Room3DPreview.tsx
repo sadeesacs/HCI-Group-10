@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, Suspense } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { RotateCcw, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -240,6 +240,41 @@ function RoomWalls({
   );
 }
 
+/* ─── R3F: Single GLB furniture item ─── */
+function GLBFurnitureItem({
+  item,
+  bbox,
+}: {
+  item: PlacedFurniture;
+  bbox: { width: number; height: number };
+}) {
+  const { scene } = useGLTF(item.glbPath!);
+  const clonedScene = useMemo(() => scene.clone(true), [scene]);
+
+  const wM = item.width / PX_PER_M;
+  const dM = item.height / PX_PER_M;
+  const xM = item.x / PX_PER_M + wM / 2 - bbox.width / 2;
+  const zM = bbox.height / 2 - (item.y / PX_PER_M + dM / 2);
+
+  const { scale, yOffset } = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(clonedScene);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    if (size.x < 0.001 || size.z < 0.001) return { scale: [1, 1, 1] as [number, number, number], yOffset: 0 };
+    const s = Math.min(wM / size.x, dM / size.z);
+    return { scale: [s, s, s] as [number, number, number], yOffset: -box.min.y * s };
+  }, [clonedScene, wM, dM]);
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={[xM, yOffset, zM]}
+      rotation={[0, -item.rotation * (Math.PI / 180), 0]}
+      scale={scale}
+    />
+  );
+}
+
 /* ─── R3F: Furniture ─── */
 function FurnitureItems({
   furniture,
@@ -254,12 +289,28 @@ function FurnitureItems({
       {furniture.map((item) => {
         const wM = item.width / PX_PER_M;
         const dM = item.height / PX_PER_M;
-        const hM = FURNITURE_HEIGHT;
         const xM = item.x / PX_PER_M + wM / 2 - bbox.width / 2;
         const zM = bbox.height / 2 - (item.y / PX_PER_M + dM / 2);
+
+        if (item.glbPath) {
+          return (
+            <Suspense
+              key={item.id}
+              fallback={
+                <mesh position={[xM, FURNITURE_HEIGHT / 2, zM]}>
+                  <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
+                  <meshStandardMaterial color={item.color} opacity={0.6} transparent />
+                </mesh>
+              }
+            >
+              <GLBFurnitureItem item={item} bbox={bbox} />
+            </Suspense>
+          );
+        }
+
         return (
-          <mesh key={item.id} position={[xM, hM / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
-            <boxGeometry args={[wM, hM, dM]} />
+          <mesh key={item.id} position={[xM, FURNITURE_HEIGHT / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
+            <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
             <meshStandardMaterial color={item.color} />
           </mesh>
         );

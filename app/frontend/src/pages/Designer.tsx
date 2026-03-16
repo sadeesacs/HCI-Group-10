@@ -256,7 +256,7 @@ const Designer = () => {
           </div>
           <ScrollArea className="flex-1">
             <div className="p-3">
-              <FurnitureLibraryPanel />
+              <FurnitureLibraryPanel onAddFurniture={ws.addFurniture} />
             </div>
           </ScrollArea>
         </aside>
@@ -276,6 +276,7 @@ const Designer = () => {
           handleReset={ws.handleReset}
           designName={activeDesign?.name}
           onRoomConfigChange={handleApplyRoom}
+        onDropFurniture={ws.addFurniture}
         />
 
         {/* Right Properties Panel */}

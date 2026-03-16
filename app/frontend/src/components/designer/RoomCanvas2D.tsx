@@ -4,6 +4,7 @@ import Konva from "konva";
 import { MousePointer } from "lucide-react";
 import type { RoomConfig, RoomDimensions } from "@/types/designer";
 import { getRoomPolygon, getRoomBoundingBox, getWallSegments, normalizeRoomDimensions, validateRoomDimensions } from "@/lib/room-geometry";
+import type { DragFurnitureTemplate } from "@/components/designer/FurnitureLibraryPanel";
 
 export interface PlacedFurniture {
   id: string;
@@ -15,6 +16,7 @@ export interface PlacedFurniture {
   rotation: number;
   color: string;
   label: string;
+  glbPath?: string;
 }
 
 interface Props {
@@ -24,13 +26,14 @@ interface Props {
   onSelect: (id: string | null) => void;
   onFurnitureUpdate: (id: string, attrs: Partial<PlacedFurniture>) => void;
   onRoomConfigChange?: (config: RoomConfig) => void;
+  onDropFurniture?: (item: PlacedFurniture) => void;
 }
 
 const GRID_SIZE = 30;
 const SNAP = 15;
 const snap = (v: number) => Math.round(v / SNAP) * SNAP;
 
-const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurnitureUpdate, onRoomConfigChange }: Props) => {
+const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurnitureUpdate, onRoomConfigChange, onDropFurniture }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -118,8 +121,40 @@ const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurniture
   const hasFurniture = furniture.length > 0;
   const hasRoom = bbox.width > 0 && bbox.height > 0;
 
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!onDropFurniture || !containerRef.current) return;
+    const raw = e.dataTransfer.getData("application/furniture");
+    if (!raw) return;
+    const template = JSON.parse(raw) as DragFurnitureTemplate;
+    const rect = containerRef.current.getBoundingClientRect();
+    const stageX = e.clientX - rect.left;
+    const stageY = e.clientY - rect.top;
+    const w = Math.round(template.widthM * PX_PER_M);
+    const h = Math.round(template.depthM * PX_PER_M);
+    const x = Math.max(0, snap(stageX - offsetX - w / 2));
+    const y = Math.max(0, snap(stageY - offsetY - h / 2));
+    onDropFurniture({
+      id: `p${Date.now()}`,
+      name: template.name,
+      label: template.label,
+      color: template.color,
+      glbPath: template.glbPath,
+      x,
+      y,
+      width: w,
+      height: h,
+      rotation: 0,
+    });
+  }, [onDropFurniture, PX_PER_M, offsetX, offsetY]);
+
   return (
-    <div ref={containerRef} className="relative h-full w-full overflow-hidden">
+    <div
+      ref={containerRef}
+      className="relative h-full w-full overflow-hidden"
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
+      onDrop={handleDrop}
+    >
       <Stage ref={stageRef} width={stageSize.width} height={stageSize.height} onClick={handleStageClick} onTap={handleStageClick}>
         {/* Grid */}
         <Layer listening={false}>
