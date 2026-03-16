@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import type { PlacedFurniture } from "./RoomCanvas2D";
+import type { PlacedFurniture } from "@/types/designer";
 import type { SelectionState } from "./PropertiesPanel";
 import type { DesignFile, RoomConfig } from "@/types/designer";
 import { getDefaultRoomConfig, getRoomBoundingBox } from "@/lib/room-geometry";
@@ -8,7 +8,7 @@ import { getDefaultRoomConfig, getRoomBoundingBox } from "@/lib/room-geometry";
 const DEFAULT_ROOM: RoomConfig = getDefaultRoomConfig("rectangle");
 
 export function useWorkspaceState() {
-  const [viewMode, setViewMode] = useState<"2D" | "3D">("2D");
+  const [viewMode, setViewMode] = useState<"2D" | "3D">("3D");
   const [furniture, setFurniture] = useState<PlacedFurniture[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [roomConfig, setRoomConfig] = useState<RoomConfig>(DEFAULT_ROOM);

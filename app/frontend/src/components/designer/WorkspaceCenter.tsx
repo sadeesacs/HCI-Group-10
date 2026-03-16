@@ -1,8 +1,6 @@
-import RoomCanvas2D from "./RoomCanvas2D";
 import Room3DPreview from "./Room3DPreview";
 import CanvasToolbar from "./CanvasToolbar";
-import type { PlacedFurniture } from "./RoomCanvas2D";
-import type { RoomConfig } from "@/types/designer";
+import type { PlacedFurniture, RoomConfig } from "@/types/designer";
 
 /* ── Workspace Center Component ── */
 interface WorkspaceCenterProps {
@@ -18,7 +16,6 @@ interface WorkspaceCenterProps {
   requestDelete: () => void;
   handleReset: () => void;
   designName?: string;
-  onRoomConfigChange?: (config: RoomConfig) => void;
   onDropFurniture?: (item: PlacedFurniture) => void;
 }
 
@@ -28,9 +25,10 @@ const WorkspaceCenter = ({
   roomConfig,
   handleFurnitureUpdate, handleRotate, handleDuplicate, requestDelete, handleReset,
   designName,
-  onRoomConfigChange,
   onDropFurniture,
 }: WorkspaceCenterProps) => {
+  const isTopDown = viewMode === "2D";
+
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-[hsl(0,0%,96%)]">
       {/* Workspace header */}
@@ -67,21 +65,19 @@ const WorkspaceCenter = ({
 
       {/* Canvas area */}
       <div className="relative flex-1 overflow-hidden">
-        {viewMode === "2D" ? (
-          <RoomCanvas2D
-            roomConfig={roomConfig}
-            furniture={furniture}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onFurnitureUpdate={handleFurnitureUpdate}
-            onRoomConfigChange={onRoomConfigChange}
-            onDropFurniture={onDropFurniture}
-          />
-        ) : (
-          <Room3DPreview roomConfig={roomConfig} furniture={furniture} />
-        )}
+        <Room3DPreview
+          roomConfig={roomConfig}
+          furniture={furniture}
+          interactive
+          topDown={isTopDown}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onFurnitureUpdate={handleFurnitureUpdate}
+          onDropFurniture={onDropFurniture}
+          showGrid={isTopDown}
+        />
 
-        {viewMode === "2D" && selectedId && (
+        {selectedId && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 animate-fade-in-up">
             <CanvasToolbar
               onRotate={handleRotate}

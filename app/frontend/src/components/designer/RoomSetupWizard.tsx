@@ -49,6 +49,44 @@ const CEILING_COLORS = [
   "#FFFFFF", "#FDFCFA", "#FAF8F5", "#F5F2ED", "#F0ECE4", "#EBE6DC", "#E5DFD3", "#DED7C9",
 ];
 
+/* CSS grid-dot background pattern for right panel */
+const GRID_BG_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "radial-gradient(circle, #c5c0b8 1px, transparent 1px)",
+  backgroundSize: "24px 24px",
+};
+
+/* ═══════════════════════════════════════════════════
+   Step Progress Indicator
+   ═══════════════════════════════════════════════════ */
+
+const StepProgress = ({ current, total }: { current: number; total: number }) => (
+  <div className="flex items-center justify-center gap-2 mb-2">
+    {Array.from({ length: total }).map((_, i) => (
+      <div key={i} className="flex items-center gap-2">
+        <div
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all ${
+            i < current
+              ? "bg-[hsl(28,35%,32%)] text-white"
+              : i === current
+              ? "bg-[hsl(28,35%,32%)] text-white ring-4 ring-[hsl(28,35%,32%,0.15)]"
+              : "bg-[hsl(30,15%,88%)] text-[hsl(30,10%,55%)]"
+          }`}
+        >
+          {i < current ? <Check size={14} /> : i + 1}
+        </div>
+        {i < total - 1 && (
+          <div
+            className={`h-[2px] w-8 rounded-full transition-colors ${
+              i < current ? "bg-[hsl(28,35%,32%)]" : "bg-[hsl(30,15%,85%)]"
+            }`}
+          />
+        )}
+      </div>
+    ))}
+  </div>
+);
+
 /* ═══════════════════════════════════════════════════
    Wizard component
    ═══════════════════════════════════════════════════ */
@@ -73,6 +111,7 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
   // Step 2 — wall selection
   const [selectedWallIdx, setSelectedWallIdx] = useState<number | null>(null);
   const [wallEditValue, setWallEditValue] = useState("");
+  const [wallEditUnit, setWallEditUnit] = useState<"m" | "cm">("m");
 
   // Build current draft config
   const draftConfig = useMemo(
@@ -114,18 +153,24 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
   }, [step, onCancel]);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-[hsl(40,25%,98%)]">
       {/* ── Left Panel ── */}
-      <div className="flex w-full flex-col border-r border-border md:w-[42%] lg:w-[38%]">
+      <div className="flex w-full flex-col border-r border-[hsl(30,15%,88%)] md:w-[42%] lg:w-[36%]">
         {/* Step header */}
-        <div className="flex-1 overflow-y-auto px-6 pt-8 pb-4 lg:px-10 lg:pt-10">
-          <p className="text-[13px] font-medium text-muted-foreground">
+        <div className="flex-1 overflow-y-auto px-7 pt-10 pb-4 lg:px-10 lg:pt-12">
+          <StepProgress current={step} total={STEPS.length} />
+
+          <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(30,10%,55%)]">
             Step {step + 1} of {STEPS.length}
           </p>
-          <h1 className="mt-1 text-xl font-bold text-foreground lg:text-2xl">{STEPS[step].title}</h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{STEPS[step].subtitle}</p>
+          <h1 className="mt-2 font-display text-2xl font-bold text-[hsl(28,20%,15%)] lg:text-[1.7rem] leading-snug">
+            {STEPS[step].title}
+          </h1>
+          <p className="mt-2 text-[13px] leading-relaxed text-[hsl(30,10%,50%)]">
+            {STEPS[step].subtitle}
+          </p>
 
-          <div className="mt-6">
+          <div className="mt-8">
             {step === 0 && (
               <StepShape shape={shape} onSelect={handleShapeSelect} />
             )}
@@ -152,12 +197,12 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
         </div>
 
         {/* Navigation */}
-        <div className="flex gap-3 border-t border-border p-5 lg:p-6">
+        <div className="flex gap-3 border-t border-[hsl(30,15%,88%)] bg-[hsl(40,20%,97%)] p-5 lg:p-6">
           {step > 0 ? (
             <Button
               variant="outline"
               onClick={handleBack}
-              className="h-11 flex-1 rounded-full border-foreground/20 text-sm font-semibold"
+              className="h-12 flex-1 rounded-full border-[hsl(30,15%,80%)] bg-white text-sm font-semibold text-[hsl(28,20%,25%)] hover:bg-[hsl(38,20%,95%)] hover:border-[hsl(28,35%,55%)]"
             >
               Go back
             </Button>
@@ -165,14 +210,14 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
             <Button
               variant="outline"
               onClick={onCancel}
-              className="h-11 flex-1 rounded-full border-foreground/20 text-sm font-semibold"
+              className="h-12 flex-1 rounded-full border-[hsl(30,15%,80%)] bg-white text-sm font-semibold text-[hsl(28,20%,25%)] hover:bg-[hsl(38,20%,95%)] hover:border-[hsl(28,35%,55%)]"
             >
               Cancel
             </Button>
           ) : null}
           <Button
             onClick={handleNext}
-            className="h-11 flex-1 rounded-full bg-foreground text-background text-sm font-semibold hover:bg-foreground/90"
+            className="h-12 flex-1 rounded-full bg-[hsl(28,35%,32%)] text-white text-sm font-semibold uppercase tracking-wider hover:bg-[hsl(28,35%,26%)] shadow-md"
           >
             {step === 3 ? "Design this room" : "Next"}
           </Button>
@@ -180,7 +225,10 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
       </div>
 
       {/* ── Right Panel — Preview ── */}
-      <div className="hidden flex-1 items-center justify-center bg-[hsl(0,0%,88%)] p-4 md:flex lg:p-6">
+      <div
+        className="hidden flex-1 md:flex items-center justify-center bg-[hsl(38,12%,91%)] overflow-hidden"
+        style={GRID_BG_STYLE}
+      >
         {step <= 1 ? (
           <FloorPlanEditor
             config={draftConfig}
@@ -192,19 +240,37 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
               setSelectedWallIdx(idx);
               if (wall.dimKey) {
                 const dimValues = draftConfig.dimensions.dims as unknown as Record<string, number>;
-                setWallEditValue(String(dimValues[wall.dimKey] ?? wall.lengthM));
+                const valM = dimValues[wall.dimKey] ?? wall.lengthM;
+                setWallEditValue(wallEditUnit === "cm" ? String(Math.round(valM * 100)) : String(valM));
               }
             }}
             editValue={step === 1 ? wallEditValue : ""}
-            onEditChange={step === 1 ? setWallEditValue : () => {}}
-            onEditApply={() => {
-              if (step !== 1 || selectedWallIdx === null) return;
+            editUnit={wallEditUnit}
+            onEditUnitToggle={() => {
+              const newUnit = wallEditUnit === "m" ? "cm" : "m";
+              setWallEditUnit(newUnit);
+              const parsed = parseFloat(wallEditValue);
+              if (!isNaN(parsed) && parsed > 0) {
+                setWallEditValue(
+                  newUnit === "cm"
+                    ? String(Math.round(parsed * 100))
+                    : String(Math.round((parsed / 100) * 10) / 10)
+                );
+              }
+            }}
+            onEditChange={(val: string) => {
+              if (step !== 1) return;
+              setWallEditValue(val);
+              // live-apply
+              if (selectedWallIdx === null) return;
               const segments = getWallSegments(draftConfig);
               const wall = segments[selectedWallIdx];
               if (!wall.dimKey) return;
-              const parsed = parseFloat(wallEditValue);
+              const parsed = parseFloat(val);
               if (isNaN(parsed) || parsed <= 0) return;
-              const rounded = Math.round(parsed * 10) / 10;
+              const meters = wallEditUnit === "cm" ? parsed / 100 : parsed;
+              const rounded = Math.round(meters * 100) / 100;
+              if (rounded < 0.1 || rounded > 50) return;
               const updated = {
                 ...dimensions,
                 dims: { ...dimensions.dims, [wall.dimKey]: rounded },
@@ -216,12 +282,13 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
             }}
           />
         ) : (
-          <div className="h-full w-full overflow-hidden rounded-xl border border-border bg-[hsl(0,0%,96%)] shadow-lg">
+          <div className="h-full w-full">
             <Room3DPreview
               roomConfig={draftConfig}
               furniture={[]}
               cameraPreset="front"
               cameraLocked
+              showGrid
             />
           </div>
         )}
@@ -248,24 +315,24 @@ const StepShape = ({
         <button
           key={s.id}
           onClick={() => onSelect(s.id)}
-          className={`group relative flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+          className={`group relative flex flex-col items-center gap-2.5 rounded-xl border-2 p-4 transition-all duration-200 ${
             active
-              ? "border-foreground bg-background shadow-md"
-              : "border-border bg-accent/20 hover:border-foreground/30 hover:bg-accent/40"
+              ? "border-[hsl(28,35%,32%)] bg-white shadow-[0_2px_12px_hsl(28,30%,30%,0.1)]"
+              : "border-[hsl(30,15%,86%)] bg-white/60 hover:border-[hsl(28,30%,60%)] hover:bg-white hover:shadow-sm"
           }`}
           aria-pressed={active}
         >
           {/* Selection handles at corners */}
           {active && (
             <>
-              <span className="absolute -top-1.5 -left-1.5 h-3 w-3 rounded-full border-2 border-foreground bg-background" />
-              <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full border-2 border-foreground bg-background" />
-              <span className="absolute -bottom-1.5 -left-1.5 h-3 w-3 rounded-full border-2 border-foreground bg-background" />
-              <span className="absolute -bottom-1.5 -right-1.5 h-3 w-3 rounded-full border-2 border-foreground bg-background" />
+              <span className="absolute -top-1.5 -left-1.5 h-3 w-3 rounded-full border-2 border-[hsl(28,35%,32%)] bg-white" />
+              <span className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full border-2 border-[hsl(28,35%,32%)] bg-white" />
+              <span className="absolute -bottom-1.5 -left-1.5 h-3 w-3 rounded-full border-2 border-[hsl(28,35%,32%)] bg-white" />
+              <span className="absolute -bottom-1.5 -right-1.5 h-3 w-3 rounded-full border-2 border-[hsl(28,35%,32%)] bg-white" />
             </>
           )}
           <ShapePreview shape={s.id} active={active} />
-          <span className={`text-xs font-semibold ${active ? "text-foreground" : "text-muted-foreground"}`}>
+          <span className={`text-xs font-semibold ${active ? "text-[hsl(28,35%,32%)]" : "text-[hsl(30,10%,50%)]"}`}>
             {s.label}
           </span>
         </button>
@@ -292,8 +359,8 @@ const ShapePreview = ({ shape, active }: { shape: RoomShape; active: boolean }) 
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <polygon
         points={pts.join(" ")}
-        fill={active ? "hsl(0,0%,92%)" : "hsl(0,0%,88%)"}
-        stroke={active ? "hsl(0,0%,15%)" : "hsl(0,0%,65%)"}
+        fill={active ? "hsl(30,20%,90%)" : "hsl(0,0%,90%)"}
+        stroke={active ? "hsl(28,35%,32%)" : "hsl(0,0%,70%)"}
         strokeWidth={active ? 2 : 1.2}
       />
     </svg>
@@ -315,8 +382,8 @@ const StepDimensionsPanel = ({
   const selectedWall = selectedWallIdx !== null ? segments[selectedWallIdx] : null;
 
   return (
-    <div className="space-y-4">
-      <p className="text-[12px] text-muted-foreground leading-relaxed">
+    <div className="space-y-5">
+      <p className="text-[12px] text-[hsl(30,10%,50%)] leading-relaxed">
         Click on a wall in the floor plan to select it and change its dimension.
         Editable walls will highlight when selected.
       </p>
@@ -327,18 +394,18 @@ const StepDimensionsPanel = ({
       </div>
 
       {selectedWall ? (
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-center">
-          <p className="text-xs font-semibold text-yellow-800">{selectedWall.label}</p>
-          <p className="text-lg font-bold text-yellow-900">{selectedWall.lengthM.toFixed(1)} m</p>
+        <div className="rounded-xl border border-[hsl(28,40%,75%)] bg-[hsl(38,40%,96%)] p-4 text-center">
+          <p className="text-xs font-semibold text-[hsl(28,35%,32%)]">{selectedWall.label}</p>
+          <p className="text-xl font-bold text-[hsl(28,30%,22%)] mt-1">{selectedWall.lengthM.toFixed(1)} m</p>
           {selectedWall.dimKey ? (
-            <p className="text-[11px] text-yellow-700">Edit the value in the floor plan →</p>
+            <p className="text-[11px] text-[hsl(28,25%,45%)] mt-1">Edit the value in the floor plan →</p>
           ) : (
-            <p className="text-[11px] text-yellow-700">This wall's length is derived from other dimensions</p>
+            <p className="text-[11px] text-[hsl(28,25%,45%)] mt-1">This wall's length is derived from other dimensions</p>
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-accent/30 p-3 text-center">
-          <p className="text-xs text-muted-foreground">Select a wall to edit its dimension</p>
+        <div className="rounded-xl border border-[hsl(30,15%,86%)] bg-white/60 p-4 text-center">
+          <p className="text-xs text-[hsl(30,10%,55%)]">Select a wall to edit its dimension</p>
         </div>
       )}
     </div>
@@ -368,8 +435,8 @@ const MiniShapeDiagram = ({
         points={Array.from({ length: n })
           .map((_, i) => `${poly[i * 2] * s + ox},${poly[i * 2 + 1] * s + oy}`)
           .join(" ")}
-        fill="hsl(0,0%,92%)"
-        stroke="hsl(0,0%,70%)"
+        fill="hsl(38,20%,93%)"
+        stroke="hsl(30,15%,75%)"
         strokeWidth={1}
       />
       {Array.from({ length: n }).map((_, i) => {
@@ -383,7 +450,7 @@ const MiniShapeDiagram = ({
           <line
             key={i}
             x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke={selected ? "#EAB308" : "hsl(0,0%,30%)"}
+            stroke={selected ? "hsl(28,35%,42%)" : "hsl(28,20%,30%)"}
             strokeWidth={selected ? 5 : 2}
             strokeLinecap="round"
           />
@@ -402,24 +469,26 @@ const FloorPlanEditor = ({
   selectedWallIdx,
   onWallSelect,
   editValue,
+  editUnit,
+  onEditUnitToggle,
   onEditChange,
-  onEditApply,
 }: {
   config: RoomConfig;
   selectedWallIdx: number | null;
   onWallSelect: (idx: number) => void;
   editValue: string;
+  editUnit: "m" | "cm";
+  onEditUnitToggle: () => void;
   onEditChange: (v: string) => void;
-  onEditApply: () => void;
 }) => {
   const segments = getWallSegments(config);
   const poly = getRoomPolygon(config);
   const bbox = getRoomBoundingBox(config);
   const n = poly.length / 2;
 
-  const viewW = 650;
-  const viewH = 500;
-  const pad = 80;
+  const viewW = 900;
+  const viewH = 700;
+  const pad = 100;
   const scale = Math.min((viewW - pad * 2) / bbox.width, (viewH - pad * 2) / bbox.height);
   const roomW = bbox.width * scale;
   const roomH = bbox.height * scale;
@@ -431,12 +500,12 @@ const FloorPlanEditor = ({
     .join(" ");
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative rounded-xl border border-border bg-[hsl(0,0%,94%)] shadow-lg overflow-hidden">
+    <div className="relative w-full h-full flex items-center justify-center p-6 lg:p-10">
+      <div className="relative w-full h-full max-h-full">
         <svg
           viewBox={`0 0 ${viewW} ${viewH}`}
-          className="block w-full max-w-[700px]"
-          style={{ aspectRatio: `${viewW}/${viewH}` }}
+          className="block w-full h-full"
+          preserveAspectRatio="xMidYMid meet"
         >
           {/* Floor fill */}
           <polygon
@@ -467,7 +536,7 @@ const FloorPlanEditor = ({
                 {/* Visible wall line */}
                 <line
                   x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke={selected ? "#EAB308" : "#1a1a1a"}
+                  stroke={selected ? "hsl(28,35%,42%)" : "#1a1a1a"}
                   strokeWidth={selected ? 10 : 7}
                   strokeLinecap="round"
                   style={{
@@ -493,7 +562,7 @@ const FloorPlanEditor = ({
             // Outward normal (right-hand for CW polygon)
             const nx = dy / len;
             const ny = -dx / len;
-            const labelDist = 28;
+            const labelDist = 32;
             const mx = (x1 + x2) / 2 + nx * labelDist;
             const my = (y1 + y2) / 2 + ny * labelDist;
 
@@ -510,10 +579,10 @@ const FloorPlanEditor = ({
                 textAnchor="middle"
                 dominantBaseline="central"
                 transform={`rotate(${angle}, ${mx}, ${my})`}
-                fontSize={12}
+                fontSize={14}
                 fontWeight={600}
                 fontFamily="Inter, sans-serif"
-                fill={selected ? "#CA8A04" : "#555"}
+                fill={selected ? "hsl(28,35%,35%)" : "#666"}
               >
                 {seg.lengthM.toFixed(1)}m
               </text>
@@ -547,30 +616,30 @@ const FloorPlanEditor = ({
           const len = Math.sqrt(dx * dx + dy * dy);
           const nx = dy / len;
           const ny = -dx / len;
-          // Position popup further out from the wall
-          const popX = ((x1 + x2) / 2 + nx * 55) / viewW * 100;
-          const popY = ((y1 + y2) / 2 + ny * 55) / viewH * 100;
+          const popX = ((x1 + x2) / 2 + nx * 60) / viewW * 100;
+          const popY = ((y1 + y2) / 2 + ny * 60) / viewH * 100;
 
           return (
             <div
-              className="absolute z-10 flex items-center gap-1.5 rounded-lg border border-yellow-300 bg-white px-3 py-2 shadow-lg"
+              className="absolute z-10 flex items-center gap-2 rounded-xl border border-[hsl(28,40%,75%)] bg-white px-4 py-2.5 shadow-lg"
               style={{ left: `${popX}%`, top: `${popY}%`, transform: "translate(-50%, -50%)" }}
             >
-              <span className="text-[11px] font-semibold text-foreground/60 whitespace-nowrap">{seg.label}</span>
+              <span className="text-[11px] font-semibold text-[hsl(30,10%,50%)] whitespace-nowrap">{seg.label}</span>
               <input
                 type="text"
                 inputMode="decimal"
                 autoFocus
                 value={editValue}
                 onChange={(e) => onEditChange(e.target.value)}
-                onBlur={onEditApply}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onEditApply();
-                  if (e.key === "Escape") onEditApply();
-                }}
-                className="w-16 rounded border border-input bg-background px-2 py-1 text-center text-sm font-bold text-foreground focus:border-yellow-400 focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                className="w-16 rounded-lg border border-[hsl(30,15%,82%)] bg-[hsl(40,25%,98%)] px-2 py-1 text-center text-sm font-bold text-[hsl(28,20%,20%)] focus:border-[hsl(28,35%,42%)] focus:outline-none focus:ring-1 focus:ring-[hsl(28,35%,42%)]"
               />
-              <span className="text-[11px] text-muted-foreground">m</span>
+              <button
+                type="button"
+                onClick={onEditUnitToggle}
+                className="text-[11px] font-semibold text-[hsl(28,35%,42%)] hover:text-[hsl(28,35%,28%)] underline decoration-dotted cursor-pointer px-0.5"
+              >
+                {editUnit}
+              </button>
             </div>
           );
         })()}
@@ -590,27 +659,42 @@ const StepHeight = ({
   wallHeight: number;
   onChange: (h: number) => void;
 }) => {
+  const [unit, setUnit] = useState<"m" | "cm">("m");
   const [raw, setRaw] = useState(String(wallHeight));
 
   const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = parseFloat(e.target.value);
     onChange(v);
-    setRaw(String(v));
+    setRaw(unit === "cm" ? String(Math.round(v * 100)) : String(v));
   };
 
-  const handleInputBlur = () => {
-    const v = parseFloat(raw);
-    if (!isNaN(v) && v >= 2 && v <= 5) {
-      onChange(Math.round(v * 10) / 10);
-    } else {
-      setRaw(String(wallHeight));
+  const handleInputChange = (val: string) => {
+    setRaw(val);
+    const parsed = parseFloat(val);
+    if (isNaN(parsed) || parsed <= 0) return;
+    const meters = unit === "cm" ? parsed / 100 : parsed;
+    if (meters >= 2 && meters <= 5) {
+      onChange(Math.round(meters * 100) / 100);
+    }
+  };
+
+  const toggleUnit = () => {
+    const newUnit = unit === "m" ? "cm" : "m";
+    setUnit(newUnit);
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && parsed > 0) {
+      setRaw(
+        newUnit === "cm"
+          ? String(Math.round(parsed * 100))
+          : String(Math.round((parsed / 100) * 10) / 10)
+      );
     }
   };
 
   return (
     <div className="space-y-6 pt-2">
       <div>
-        <label className="block text-sm font-semibold text-foreground mb-3">Wall Height</label>
+        <label className="block text-sm font-semibold text-[hsl(28,20%,20%)] mb-3">Wall Height</label>
         <div className="flex items-center gap-4">
           <input
             type="range"
@@ -619,34 +703,38 @@ const StepHeight = ({
             step={0.1}
             value={wallHeight}
             onChange={handleSlider}
-            className="flex-1 h-2 appearance-none rounded-full bg-foreground/15 accent-foreground cursor-pointer
+            className="flex-1 h-2 appearance-none rounded-full bg-[hsl(30,15%,85%)] cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:shadow-md
-              [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background"
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[hsl(28,35%,32%)] [&::-webkit-slider-thumb]:shadow-md
+              [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
           />
           <div className="flex items-center gap-1">
             <input
               type="text"
               inputMode="decimal"
               value={raw}
-              onChange={(e) => setRaw(e.target.value)}
-              onBlur={handleInputBlur}
-              onKeyDown={(e) => e.key === "Enter" && handleInputBlur()}
-              className="w-14 rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm font-bold text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+              onChange={(e) => handleInputChange(e.target.value)}
+              className="w-16 rounded-lg border border-[hsl(30,15%,82%)] bg-white px-2 py-1.5 text-center text-sm font-bold text-[hsl(28,20%,20%)] focus:border-[hsl(28,35%,42%)] focus:outline-none focus:ring-1 focus:ring-[hsl(28,35%,42%)]"
             />
-            <span className="text-sm text-muted-foreground">m</span>
+            <button
+              type="button"
+              onClick={toggleUnit}
+              className="text-sm font-semibold text-[hsl(28,35%,42%)] hover:text-[hsl(28,35%,28%)] underline decoration-dotted cursor-pointer"
+            >
+              {unit}
+            </button>
           </div>
         </div>
         <div className="flex justify-between mt-1.5">
-          <span className="text-[10px] text-muted-foreground">2.0m</span>
-          <span className="text-[10px] text-muted-foreground">5.0m</span>
+          <span className="text-[10px] text-[hsl(30,10%,60%)]">{unit === "cm" ? "200cm" : "2.0m"}</span>
+          <span className="text-[10px] text-[hsl(30,10%,60%)]">{unit === "cm" ? "500cm" : "5.0m"}</span>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-accent/30 p-4">
-        <p className="text-[12px] text-muted-foreground leading-relaxed">
-          Standard residential ceiling height is <strong>2.7 – 3.0m</strong>.
-          Adjust the slider or type a value between 2.0m and 5.0m.
+      <div className="rounded-xl border border-[hsl(30,15%,86%)] bg-white/60 p-4">
+        <p className="text-[12px] text-[hsl(30,10%,50%)] leading-relaxed">
+          Standard residential ceiling height is <strong className="text-[hsl(28,20%,25%)]">2.7 – 3.0m</strong>.
+          Adjust the slider or type a value between 2.0m and 5.0m. Click the unit to toggle between m and cm.
         </p>
       </div>
     </div>
@@ -672,12 +760,12 @@ const StepColors = ({
   onFloorColor: (c: string) => void;
   onCeilingColor: (c: string) => void;
 }) => (
-  <div className="space-y-5">
-    <ColorPalette label="Wall color" colors={WALL_COLORS} selected={wallColor} onSelect={onWallColor} />
-    <div className="h-px bg-border" />
-    <ColorPalette label="Floor color" colors={FLOOR_COLORS} selected={floorColor} onSelect={onFloorColor} />
-    <div className="h-px bg-border" />
-    <ColorPalette label="Ceiling color" colors={CEILING_COLORS} selected={ceilingColor} onSelect={onCeilingColor} />
+  <div className="space-y-6">
+    <ColorPalette label="Wall Color" colors={WALL_COLORS} selected={wallColor} onSelect={onWallColor} />
+    <div className="h-px bg-[hsl(30,15%,88%)]" />
+    <ColorPalette label="Floor Color" colors={FLOOR_COLORS} selected={floorColor} onSelect={onFloorColor} />
+    <div className="h-px bg-[hsl(30,15%,88%)]" />
+    <ColorPalette label="Ceiling Color" colors={CEILING_COLORS} selected={ceilingColor} onSelect={onCeilingColor} />
   </div>
 );
 
@@ -693,25 +781,25 @@ const ColorPalette = ({
   onSelect: (c: string) => void;
 }) => (
   <div>
-    <span className="mb-2 block text-sm font-semibold text-foreground">{label}</span>
-    <div className="flex flex-wrap gap-2">
+    <span className="mb-3 block text-sm font-semibold text-[hsl(28,20%,20%)]">{label}</span>
+    <div className="flex flex-wrap gap-2.5">
       {colors.map((hex) => {
         const active = selected.toLowerCase() === hex.toLowerCase();
         return (
           <button
             key={hex}
             onClick={() => onSelect(hex)}
-            className={`h-8 w-8 shrink-0 rounded-md border-2 transition-all ${
+            className={`h-9 w-9 shrink-0 rounded-full transition-all duration-200 ${
               active
-                ? "border-foreground ring-2 ring-foreground/20 scale-110"
-                : "border-border hover:border-foreground/40 hover:scale-105"
+                ? "ring-2 ring-[hsl(28,35%,32%)] ring-offset-2 ring-offset-[hsl(40,25%,98%)] scale-110 shadow-md"
+                : "border-2 border-[hsl(30,15%,85%)] hover:border-[hsl(28,30%,55%)] hover:scale-110 hover:shadow-sm"
             }`}
             style={{ backgroundColor: hex }}
             aria-label={`${label}: ${hex}`}
             aria-pressed={active}
           >
             {active && (
-              <Check size={14} className="mx-auto text-foreground/60 drop-shadow-[0_0_2px_rgba(255,255,255,0.9)]" />
+              <Check size={14} className="mx-auto text-foreground/70 drop-shadow-[0_0_3px_rgba(255,255,255,1)]" />
             )}
           </button>
         );

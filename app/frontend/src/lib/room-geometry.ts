@@ -12,7 +12,7 @@ import type {
 
 const DEFAULT_DIMS: Record<RoomShape, RoomDimensions> = {
   rectangle: { shape: "rectangle", dims: { width: 4.5, length: 6 } },
-  square: { shape: "square", dims: { side: 5 } },
+  square: { shape: "square", dims: { width: 5, length: 5 } },
   "l-shape": {
     shape: "l-shape",
     dims: { mainWidth: 6, mainLength: 7, cutoutWidth: 3, cutoutLength: 3.5, legWidth: 3, legLength: 3.5 },
@@ -136,7 +136,8 @@ export function validateRoomDimensions(dim: RoomDimensions): ValidationResult {
       break;
     }
     case "square": {
-      rangeCheck(dim.dims.side, "Side", errors, "side");
+      rangeCheck(dim.dims.width, "Width", errors, "width");
+      rangeCheck(dim.dims.length, "Length", errors, "length");
       break;
     }
     case "l-shape": {
@@ -197,7 +198,7 @@ export function getRoomPolygonFromDims(dim: RoomDimensions): number[] {
     case "rectangle":
       return rectPoly(d.dims.width, d.dims.length);
     case "square":
-      return rectPoly(d.dims.side, d.dims.side);
+      return rectPoly(d.dims.width, d.dims.length);
     case "l-shape": {
       const { mainWidth: w, mainLength: h, cutoutWidth: cw, cutoutLength: ch } = d.dims;
       // Clockwise from top-left
@@ -277,7 +278,7 @@ export function getBoundingBoxFromDims(dim: RoomDimensions): BoundingBox {
     case "rectangle":
       return { width: d.dims.width, height: d.dims.length };
     case "square":
-      return { width: d.dims.side, height: d.dims.side };
+      return { width: d.dims.width, height: d.dims.length };
     case "l-shape":
       return { width: d.dims.mainWidth, height: d.dims.mainLength };
     case "u-shape":
@@ -306,7 +307,8 @@ export const DIMENSION_FIELDS: Record<RoomShape, DimField[]> = {
     { key: "length", label: "Length", shortLabel: "L" },
   ],
   square: [
-    { key: "side", label: "Side", shortLabel: "S" },
+    { key: "width", label: "Width", shortLabel: "W" },
+    { key: "length", label: "Length", shortLabel: "L" },
   ],
   "l-shape": [
     { key: "mainWidth", label: "Main Width", shortLabel: "MW" },
@@ -378,10 +380,10 @@ function wallMeta(shape: RoomShape): Array<{ label: string; dimKey?: string }> {
       ];
     case "square":
       return [
-        { label: "Side", dimKey: "side" },
-        { label: "Side", dimKey: "side" },
-        { label: "Side", dimKey: "side" },
-        { label: "Side", dimKey: "side" },
+        { label: "Width", dimKey: "width" },
+        { label: "Length", dimKey: "length" },
+        { label: "Width", dimKey: "width" },
+        { label: "Length", dimKey: "length" },
       ];
     case "l-shape":
       return [
@@ -459,7 +461,8 @@ export function fromLegacyRoomConfig(old: LegacyRoomConfig): RoomConfig {
     };
   } else if (shape === "square") {
     (base.dimensions as { shape: "square"; dims: SquareDims }).dims = {
-      side: Math.min(old.widthM, old.lengthM),
+      width: old.widthM,
+      length: old.lengthM,
     };
   }
 

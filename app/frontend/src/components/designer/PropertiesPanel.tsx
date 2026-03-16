@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Settings, Box, Armchair, Copy, Trash2, RotateCcw, Grid3X3, Magnet, Ruler, Save, DollarSign, MousePointer } from "lucide-react";
+import { Settings, Box, Armchair, Copy, Trash2, RotateCcw, Grid3X3, Magnet, Ruler, Save, DollarSign, MousePointer, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import type { PlacedFurniture } from "./RoomCanvas2D";
+import type { PlacedFurniture } from "@/types/designer";
 import type { RoomConfig } from "@/types/designer";
 import { getRoomBoundingBox } from "@/lib/room-geometry";
 
@@ -183,6 +183,15 @@ const FurnitureProperties = ({
         </div>
       </PanelCard>
 
+      {item.glbPath && (
+        <PanelCard icon={<Palette size={13} />} title="Upholstery">
+          <CushionColorPicker
+            currentColor={item.cushionColor || item.color}
+            onChange={(color) => onUpdate({ cushionColor: color })}
+          />
+        </PanelCard>
+      )}
+
       <PanelCard icon={<Settings size={13} />} title="Actions">
         <div className="space-y-1">
           <Button variant="outline" size="sm" className="w-full h-6 gap-1.5 text-[10px] font-medium rounded-md border-border" onClick={onDuplicate}><Copy size={10} />Duplicate</Button>
@@ -191,6 +200,59 @@ const FurnitureProperties = ({
         </div>
       </PanelCard>
     </>
+  );
+};
+
+/* ── Cushion / Upholstery color picker ── */
+
+const UPHOLSTERY_PRESETS = [
+  { name: "Natural Beige", color: "#D4B896" },
+  { name: "Charcoal", color: "#3C3C3C" },
+  { name: "Ivory", color: "#F5F0E8" },
+  { name: "Sage Green", color: "#8B9E7E" },
+  { name: "Dusty Rose", color: "#C9A0A0" },
+  { name: "Navy", color: "#2C3E5A" },
+  { name: "Rust", color: "#B5563E" },
+  { name: "Warm Grey", color: "#9B9590" },
+  { name: "Mustard", color: "#C9A83E" },
+  { name: "Teal", color: "#4A7C7E" },
+];
+
+const CushionColorPicker = ({
+  currentColor,
+  onChange,
+}: {
+  currentColor: string;
+  onChange: (color: string) => void;
+}) => {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-5 gap-1.5">
+        {UPHOLSTERY_PRESETS.map((preset) => (
+          <button
+            key={preset.color}
+            title={preset.name}
+            onClick={() => onChange(preset.color)}
+            className={`group relative h-6 w-full rounded-md border transition-all hover:scale-110 ${
+              currentColor.toLowerCase() === preset.color.toLowerCase()
+                ? "border-[hsl(28,35%,32%)] ring-1 ring-[hsl(28,35%,32%)] scale-110"
+                : "border-border hover:border-foreground/30"
+            }`}
+            style={{ backgroundColor: preset.color }}
+          />
+        ))}
+      </div>
+      <div className="flex items-center gap-2 rounded-md bg-accent/50 px-2 py-1">
+        <label className="text-[9px] font-medium text-muted-foreground shrink-0">Custom</label>
+        <input
+          type="color"
+          value={currentColor}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-5 w-8 cursor-pointer rounded border border-border bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-0"
+        />
+        <span className="text-[9px] font-mono text-muted-foreground uppercase">{currentColor}</span>
+      </div>
+    </div>
   );
 };
 

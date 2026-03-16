@@ -292,7 +292,6 @@ const Designer = () => {
           requestDelete={ws.requestDelete}
           handleReset={ws.handleReset}
           designName={activeDesign?.name}
-          onRoomConfigChange={handleApplyRoom}
         onDropFurniture={ws.addFurniture}
         />
 

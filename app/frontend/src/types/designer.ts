@@ -1,4 +1,16 @@
-import type { PlacedFurniture } from "@/components/designer/RoomCanvas2D";
+export interface PlacedFurniture {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  color: string;
+  label: string;
+  glbPath?: string;
+  cushionColor?: string;
+}
 
 export type RoomShape = "rectangle" | "square" | "l-shape" | "u-shape" | "t-shape" | "studio";
 
@@ -10,7 +22,8 @@ export interface RectangleDims {
 }
 
 export interface SquareDims {
-  side: number;
+  width: number;
+  length: number;
 }
 
 /**
@@ -135,5 +148,3 @@ export interface DesignSlot {
   slotIndex: number;
   design: DesignFile | null;
 }
-
-export type { PlacedFurniture };

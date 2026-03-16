@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { fetchProducts } from "@/lib/api";
 import type { Product } from "@/types/product";
-import type { PlacedFurniture } from "@/components/designer/RoomCanvas2D";
+import type { PlacedFurniture } from "@/types/designer";
 
 /* ─── Local furniture catalog (GLB-backed items) ─── */
 export interface DragFurnitureTemplate {
@@ -14,6 +14,7 @@ export interface DragFurnitureTemplate {
   color: string;
   glbPath: string;
   label: string;
+  cushionColor?: string;
 }
 
 const LOCAL_CATALOG: Array<DragFurnitureTemplate & { id: string; image: string; price?: number; category: string }> = [
@@ -26,6 +27,7 @@ const LOCAL_CATALOG: Array<DragFurnitureTemplate & { id: string; image: string; 
     color: "#D4B896",
     glbPath: "/models/kandy.glb",
     label: "Kandy",
+    cushionColor: "#D4B896",
     image: "/assets/products/chairs/mid-century-armchair-1.jpg",
     price: 45000,
   },
@@ -102,6 +104,7 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
       color: item.color,
       glbPath: item.glbPath,
       label: item.label,
+      cushionColor: item.cushionColor,
     };
     e.dataTransfer.setData("application/furniture", JSON.stringify(payload));
     e.dataTransfer.effectAllowed = "copy";
@@ -122,6 +125,7 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
       color: item.color,
       label: item.label,
       glbPath: item.glbPath,
+      cushionColor: item.cushionColor,
     });
     toast.success(`${item.name} added to room`, {
       description: item.price ? formatPrice(item.price) : undefined,
