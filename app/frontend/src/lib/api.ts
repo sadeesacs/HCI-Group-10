@@ -87,17 +87,22 @@ function buildUrl(path: string, params?: Record<string, unknown>): URL {
 async function requestJson<T>(
   path: string,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
     params?: Record<string, unknown>;
     body?: Record<string, unknown> | Array<unknown>;
+    token?: string;
   } = {}
 ): Promise<T> {
-  const { method = "GET", params, body } = options;
+  const { method = "GET", params, body, token } = options;
   const url = buildUrl(path, params);
+
+  const headers: Record<string, string> = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(url.toString(), {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -142,4 +147,51 @@ export async function fetchOrder(orderNumber: string): Promise<{ order: Order }>
 
 export async function submitContact(payload: ContactPayload): Promise<{ message: string }> {
   return requestJson<{ message: string }>("/contact", { method: "POST", body: payload });
+}
+
+/* ── Design API ── */
+
+export interface DesignResponse {
+  id: string;
+  slotIndex: number;
+  name: string;
+  roomConfig: Record<string, unknown>;
+  items: Array<Record<string, unknown>>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchDesigns(token: string): Promise<{ designs: DesignResponse[] }> {
+  return requestJson<{ designs: DesignResponse[] }>("/designs", { token });
+}
+
+export async function saveDesign(
+  token: string,
+  slotIndex: number,
+  data: { name: string; roomConfig: unknown; items: unknown[] }
+): Promise<{ design: DesignResponse }> {
+  return requestJson<{ design: DesignResponse }>(`/designs/${slotIndex}`, {
+    method: "PUT",
+    body: data as Record<string, unknown>,
+    token,
+  });
+}
+
+export async function deleteDesignApi(token: string, slotIndex: number): Promise<{ message: string }> {
+  return requestJson<{ message: string }>(`/designs/${slotIndex}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function renameDesignApi(
+  token: string,
+  slotIndex: number,
+  name: string
+): Promise<{ design: DesignResponse }> {
+  return requestJson<{ design: DesignResponse }>(`/designs/${slotIndex}/rename`, {
+    method: "PATCH",
+    body: { name },
+    token,
+  });
 }

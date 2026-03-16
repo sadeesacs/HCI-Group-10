@@ -12,6 +12,7 @@ interface SavedDesignsModalProps {
   open: boolean;
   slots: DesignSlot[];
   canClose: boolean;
+  loading?: boolean;
   onClose: () => void;
   onOpenDesign: (design: DesignFile) => void;
   onCreateDesign: (slotIndex: number) => void;
@@ -20,7 +21,7 @@ interface SavedDesignsModalProps {
 }
 
 const SavedDesignsModal = ({
-  open, slots, canClose, onClose, onOpenDesign, onCreateDesign, onRenameDesign, onDeleteDesign,
+  open, slots, canClose, loading, onClose, onOpenDesign, onCreateDesign, onRenameDesign, onDeleteDesign,
 }: SavedDesignsModalProps) => {
   const [deletingSlot, setDeletingSlot] = useState<number | null>(null);
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
@@ -99,6 +100,12 @@ const SavedDesignsModal = ({
 
             {/* 5×2 Grid */}
             <div className="px-8 pt-5 pb-8">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[hsl(28,35%,32%)] border-t-transparent" />
+                  <p className="mt-3 text-sm text-muted-foreground">Loading your designs…</p>
+                </div>
+              ) : (
               <div className="grid grid-cols-5 gap-3">
                 {slots.map((slot, i) => {
                   const design = slot.design;
@@ -236,6 +243,7 @@ const SavedDesignsModal = ({
                   );
                 })}
               </div>
+              )}
             </div>
           </motion.div>
         </motion.div>

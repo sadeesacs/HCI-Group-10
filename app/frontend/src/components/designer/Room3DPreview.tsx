@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, Suspense } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -28,6 +28,35 @@ interface Props {
   hideWallIdx?: number;
   cameraPreset?: CameraPresetName;
   cameraLocked?: boolean;
+}
+
+interface ModelErrorBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
+interface ModelErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ModelErrorBoundary extends Component<ModelErrorBoundaryProps, ModelErrorBoundaryState> {
+  state: ModelErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ModelErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Failed to render GLB furniture model", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
 }
 
 /* ─── Room geometry hook ─── */
@@ -275,6 +304,26 @@ function GLBFurnitureItem({
   );
 }
 
+function FurnitureFallbackMesh({
+  item,
+  bbox,
+}: {
+  item: PlacedFurniture;
+  bbox: { width: number; height: number };
+}) {
+  const wM = item.width / PX_PER_M;
+  const dM = item.height / PX_PER_M;
+  const xM = item.x / PX_PER_M + wM / 2 - bbox.width / 2;
+  const zM = bbox.height / 2 - (item.y / PX_PER_M + dM / 2);
+
+  return (
+    <mesh position={[xM, FURNITURE_HEIGHT / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
+      <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
+      <meshStandardMaterial color={item.color} opacity={0.75} transparent />
+    </mesh>
+  );
+}
+
 /* ─── R3F: Furniture ─── */
 function FurnitureItems({
   furniture,
@@ -294,17 +343,14 @@ function FurnitureItems({
 
         if (item.glbPath) {
           return (
-            <Suspense
+            <ModelErrorBoundary
               key={item.id}
-              fallback={
-                <mesh position={[xM, FURNITURE_HEIGHT / 2, zM]}>
-                  <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
-                  <meshStandardMaterial color={item.color} opacity={0.6} transparent />
-                </mesh>
-              }
+              fallback={<FurnitureFallbackMesh item={item} bbox={bbox} />}
             >
-              <GLBFurnitureItem item={item} bbox={bbox} />
-            </Suspense>
+              <Suspense fallback={<FurnitureFallbackMesh item={item} bbox={bbox} />}>
+                <GLBFurnitureItem item={item} bbox={bbox} />
+              </Suspense>
+            </ModelErrorBoundary>
           );
         }
 
@@ -413,5 +459,7 @@ const Room3DPreview = ({
     </div>
   );
 };
+
+useGLTF.preload("/models/kandy.glb");
 
 export default Room3DPreview;

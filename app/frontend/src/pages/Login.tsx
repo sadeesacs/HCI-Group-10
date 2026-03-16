@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +26,7 @@ const Login = () => {
       localStorage.setItem("authUser", JSON.stringify(result.user));
       window.dispatchEvent(new Event("auth-changed"));
       toast.success("Logged in successfully");
-      navigate("/");
+      navigate(redirectTo);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to log in";
       toast.error(message);

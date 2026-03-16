@@ -12,6 +12,7 @@ import PropertiesPanel from "@/components/designer/PropertiesPanel";
 import ConfirmDialog from "@/components/designer/ConfirmDialog";
 import { useDesignFiles } from "@/hooks/use-design-files";
 import type { DesignFile, RoomConfig } from "@/types/designer";
+import { toast } from "sonner";
 
 type SaveStatus = "saved" | "unsaved" | "saving";
 
@@ -23,7 +24,7 @@ const SAVE_LABELS: Record<SaveStatus, string> = {
 
 const Designer = () => {
   const navigate = useNavigate();
-  const { slots, createDesign, renameDesign, deleteDesign, updateDesign } = useDesignFiles();
+  const { slots, loading, createDesign, renameDesign, deleteDesign, updateDesign, persistDesign } = useDesignFiles();
   const [activeDesign, setActiveDesign] = useState<DesignFile | null>(null);
   const [showFilePicker, setShowFilePicker] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
@@ -36,13 +37,28 @@ const Designer = () => {
     if (ws.hasUnsavedChanges) setSaveStatus("unsaved");
   }, [ws.hasUnsavedChanges]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
+    if (!activeDesign) return;
     setSaveStatus("saving");
-    setTimeout(() => {
+    try {
+      const saved = await persistDesign(
+        activeDesign.slotIndex,
+        activeDesign.name,
+        ws.roomConfig,
+        ws.furniture
+      );
+      if (saved) {
+        setActiveDesign(saved);
+      }
       ws.handleSave();
       setSaveStatus("saved");
-    }, 600);
-  }, [ws]);
+      toast.success("Design saved");
+    } catch (err) {
+      console.error("Save failed:", err);
+      setSaveStatus("unsaved");
+      toast.error("Failed to save design");
+    }
+  }, [activeDesign, ws, persistDesign]);
 
   const handleOpenDesign = useCallback((design: DesignFile) => {
     setActiveDesign(design);
@@ -112,6 +128,7 @@ const Designer = () => {
         open={showFilePicker}
         slots={slots}
         canClose={activeDesign !== null}
+        loading={loading}
         onClose={() => setShowFilePicker(false)}
         onOpenDesign={handleOpenDesign}
         onCreateDesign={handleCreateDesign}

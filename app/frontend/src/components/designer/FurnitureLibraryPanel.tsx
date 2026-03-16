@@ -24,7 +24,7 @@ const LOCAL_CATALOG: Array<DragFurnitureTemplate & { id: string; image: string; 
     widthM: 0.8,
     depthM: 0.85,
     color: "#D4B896",
-    glbPath: "/models/Meshy_AI_Beige_Mid_Century_Arm_0314104541_generate.glb",
+    glbPath: "/models/kandy.glb",
     label: "Kandy",
     image: "/assets/products/chairs/mid-century-armchair-1.jpg",
     price: 45000,

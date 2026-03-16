@@ -18,8 +18,9 @@ import FAQ from "./pages/FAQ";
 import About from "./pages/About";
 import Inspiration from "./pages/Inspiration";
 import NotFound from "./pages/NotFound";
-
 import Designer from "./pages/Designer";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -27,8 +28,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
         <BrowserRouter>
+          <AuthProvider>
           <Routes>
-            <Route path="/designer" element={<Designer />} />
+            <Route path="/designer" element={<ProtectedRoute><Designer /></ProtectedRoute>} />
 
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
@@ -49,6 +51,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
+          </AuthProvider>
         </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
