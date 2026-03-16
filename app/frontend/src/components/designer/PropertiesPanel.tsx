@@ -7,13 +7,6 @@ import type { PlacedFurniture } from "@/types/designer";
 import type { RoomConfig } from "@/types/designer";
 import { getRoomBoundingBox } from "@/lib/room-geometry";
 
-const PRICE_MAP: Record<string, number> = {
-  "Nordic Sofa": 128500,
-  "Side Table": 18500,
-  "Accent Chair": 48900,
-  "Bookshelf": 42000,
-};
-
 const formatLKR = (n: number) => `LKR ${n.toLocaleString("en-LK")}`;
 
 type SelectionState = "none" | "room" | "furniture";
@@ -35,7 +28,7 @@ const PropertiesPanel = ({
   selectionState, selectedItem, roomConfig, furniture,
   onDuplicate, onDelete, onReset, onFurnitureUpdate, onSave, saveStatus,
 }: Props) => {
-  const totalPrice = furniture.reduce((sum, f) => sum + (PRICE_MAP[f.name] || 25000), 0);
+  const totalPrice = furniture.reduce((sum, f) => sum + (f.price ?? 0), 0);
 
   return (
     <aside className="hidden w-72 shrink-0 border-l border-border bg-background xl:flex xl:flex-col">
@@ -74,6 +67,16 @@ const PropertiesPanel = ({
               <span className="text-muted-foreground">Items</span>
               <span className="font-medium text-foreground">{furniture.length}</span>
             </div>
+            {furniture.length > 0 && (
+              <div className="space-y-0.5 max-h-[100px] overflow-y-auto">
+                {furniture.map((f) => (
+                  <div key={f.id} className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground truncate max-w-[120px]">{f.name}</span>
+                    <span className="text-foreground/70 shrink-0">{f.price ? formatLKR(f.price) : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="border-t border-border pt-1.5">
               <div className="flex justify-between items-baseline">
                 <span className="text-[11px] font-medium text-foreground/70">Total</span>
@@ -156,17 +159,21 @@ const FurnitureProperties = ({
   item: PlacedFurniture; onDuplicate: () => void; onDelete: () => void; onReset: () => void;
   onUpdate: (attrs: Partial<PlacedFurniture>) => void;
 }) => {
-  const price = PRICE_MAP[item.name] || 25000;
+  const price = item.price ?? 0;
   return (
     <>
       <PanelCard icon={<Armchair size={13} />} title="Selected">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border" style={{ backgroundColor: item.color }}>
-            <span className="text-[8px] font-bold text-foreground/40">{item.label}</span>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border overflow-hidden" style={{ backgroundColor: item.color }}>
+            {item.image ? (
+              <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-[8px] font-bold text-foreground/40">{item.label}</span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-[12px] font-medium text-foreground">{item.name}</p>
-            <p className="text-[10px] text-muted-foreground">{formatLKR(price)}</p>
+            {price > 0 && <p className="text-[10px] text-muted-foreground">{formatLKR(price)}</p>}
           </div>
         </div>
       </PanelCard>

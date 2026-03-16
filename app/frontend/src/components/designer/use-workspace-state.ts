@@ -56,13 +56,22 @@ export function useWorkspaceState() {
   const markDirty = useCallback(() => setHasUnsavedChanges(true), []);
 
   const handleFurnitureUpdate = useCallback((id: string, attrs: Partial<PlacedFurniture>) => {
+    const bbox = getRoomBoundingBox(roomConfig);
+    const maxW = bbox.width * 120;  // PX_PER_M
+    const maxH = bbox.height * 120;
     setFurniture((prev) => {
-      const next = prev.map((f) => (f.id === id ? { ...f, ...attrs } : f));
+      const next = prev.map((f) => {
+        if (f.id !== id) return f;
+        const merged = { ...f, ...attrs };
+        merged.x = Math.max(0, Math.min(merged.x, maxW - merged.width));
+        merged.y = Math.max(0, Math.min(merged.y, maxH - merged.height));
+        return merged;
+      });
       pushHistory(next);
       return next;
     });
     markDirty();
-  }, [pushHistory, markDirty]);
+  }, [pushHistory, markDirty, roomConfig]);
 
   const handleRotate = useCallback((deg: number) => {
     if (!selectedId) return;
@@ -173,14 +182,22 @@ export function useWorkspaceState() {
   }, [markDirty, pushHistory]);
 
   const addFurniture = useCallback((item: PlacedFurniture) => {
+    const bbox = getRoomBoundingBox(roomConfig);
+    const maxW = bbox.width * 120;
+    const maxH = bbox.height * 120;
+    const clamped = {
+      ...item,
+      x: Math.max(0, Math.min(item.x, maxW - item.width)),
+      y: Math.max(0, Math.min(item.y, maxH - item.height)),
+    };
     setFurniture((prev) => {
-      const next = [...prev, item];
+      const next = [...prev, clamped];
       pushHistory(next);
       return next;
     });
-    setSelectedId(item.id);
+    setSelectedId(clamped.id);
     markDirty();
-  }, [pushHistory, markDirty]);
+  }, [pushHistory, markDirty, roomConfig]);
 
   return {
     viewMode, setViewMode,

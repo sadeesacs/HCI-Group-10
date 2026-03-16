@@ -10,6 +10,9 @@ export interface PlacedFurniture {
   label: string;
   glbPath?: string;
   cushionColor?: string;
+  price?: number;
+  productId?: string;
+  image?: string;
 }
 
 export type RoomShape = "rectangle" | "square" | "l-shape" | "u-shape" | "t-shape" | "studio";
@@ -103,13 +106,14 @@ export type RoomDimensions =
   | { shape: "t-shape"; dims: TShapeDims }
   | { shape: "studio"; dims: StudioDims };
 
-/* ── Placeholder types for future door/window support ── */
+/* ── Door / Window placement ── */
 
 export interface DoorPlacement {
   id: string;
   wallIndex: number;
   positionAlongWall: number; // 0–1 fraction
   widthM: number;
+  styleId?: string; // e.g. "single" | "double" | "sliding" | "bifold"
 }
 
 export interface WindowPlacement {
@@ -119,6 +123,7 @@ export interface WindowPlacement {
   widthM: number;
   heightM: number;
   sillHeightM: number;
+  styleId?: string; // e.g. "standard" | "wide" | "bay" | "narrow"
 }
 
 /* ── Room config ── */

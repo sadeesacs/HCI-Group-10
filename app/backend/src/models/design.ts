@@ -47,6 +47,10 @@ const furnitureItemSchema = new Schema(
     color: { type: String, required: true },
     label: { type: String, required: true },
     glbPath: { type: String },
+    cushionColor: { type: String },
+    price: { type: Number },
+    productId: { type: String },
+    image: { type: String },
   },
   { _id: false }
 );

@@ -354,13 +354,15 @@ function InteractiveFurnitureItem({
     const newXm = intersect.x + dragOffset.current.x;
     const newZm = intersect.z + dragOffset.current.z;
 
-    // Convert back to pixel coords
+    // Convert back to pixel coords and clamp within room bounds
     const newPxX = snapM(newXm - wM / 2 + bbox.width / 2) * PX_PER_M;
     const newPxY = snapM(bbox.height / 2 - newZm - dM / 2) * PX_PER_M;
+    const maxPxX = bbox.width * PX_PER_M - item.width;
+    const maxPxY = bbox.height * PX_PER_M - item.height;
 
     onUpdate(item.id, {
-      x: Math.max(0, newPxX),
-      y: Math.max(0, newPxY),
+      x: Math.max(0, Math.min(maxPxX, newPxX)),
+      y: Math.max(0, Math.min(maxPxY, newPxY)),
     });
   }, [item.id, wM, dM, bbox, onUpdate]);
 
@@ -603,9 +605,11 @@ const Room3DPreview = ({
     const wPx = Math.round(template.widthM * PX_PER_M);
     const hPx = Math.round(template.depthM * PX_PER_M);
 
-    // Convert world to pixel coords
-    const pxX = Math.max(0, Math.round((worldX + bbox.width / 2 - template.widthM / 2) * PX_PER_M));
-    const pxY = Math.max(0, Math.round((bbox.height / 2 - worldZ - template.depthM / 2) * PX_PER_M));
+    // Convert world to pixel coords and clamp within room bounds
+    const rawPxX = Math.round((worldX + bbox.width / 2 - template.widthM / 2) * PX_PER_M);
+    const rawPxY = Math.round((bbox.height / 2 - worldZ - template.depthM / 2) * PX_PER_M);
+    const pxX = Math.max(0, Math.min(rawPxX, Math.round(bbox.width * PX_PER_M) - wPx));
+    const pxY = Math.max(0, Math.min(rawPxY, Math.round(bbox.height * PX_PER_M) - hPx));
 
     onDropFurniture({
       id: `p${Date.now()}`,
@@ -614,6 +618,9 @@ const Room3DPreview = ({
       color: template.color,
       glbPath: template.glbPath,
       cushionColor: template.cushionColor,
+      price: template.price,
+      productId: template.productId,
+      image: template.image,
       x: pxX,
       y: pxY,
       width: wPx,
@@ -706,6 +713,16 @@ const Room3DPreview = ({
   );
 };
 
-useGLTF.preload("/models/kandy.glb");
+/* Preload all available GLB models */
+[
+  "69b4ddcde8135ff7a1a1503f",
+  "69b4ddcde8135ff7a1a15077",
+  "69b4ddcde8135ff7a1a15047",
+  "69b4ddcde8135ff7a1a15070",
+  "69b4ddcde8135ff7a1a1505d",
+  "69b4ddcde8135ff7a1a1505c",
+  "69b4ddcde8135ff7a1a1505e",
+  "69b4ddcde8135ff7a1a15062",
+].forEach((id) => useGLTF.preload(`/models/${id}.glb`));
 
 export default Room3DPreview;
