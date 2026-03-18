@@ -113,6 +113,8 @@ export interface DoorPlacement {
   wallIndex: number;
   positionAlongWall: number; // 0–1 fraction
   widthM: number;
+  heightM: number;
+  bottomM?: number;
   styleId?: string; // e.g. "single" | "double" | "sliding" | "bifold"
 }
 

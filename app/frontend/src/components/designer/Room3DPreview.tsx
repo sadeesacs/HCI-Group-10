@@ -4,7 +4,7 @@ import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { RoomConfig, PlacedFurniture } from "@/types/designer";
+import type { DoorPlacement, RoomConfig, PlacedFurniture, WindowPlacement } from "@/types/designer";
 import type { DragFurnitureTemplate } from "./FurnitureLibraryPanel";
 import { getRoomPolygon, getRoomBoundingBox } from "@/lib/room-geometry";
 
@@ -14,6 +14,9 @@ const WALL_THICKNESS = 0.06;
 const FURNITURE_HEIGHT = 0.4;
 const SNAP_M = 0.125; // ~15px at 120 px/m
 const snapM = (v: number) => Math.round(v / SNAP_M) * SNAP_M;
+const OPENING_DEPTH = WALL_THICKNESS * 1.15;
+const OPENING_MARGIN_M = 0.08;
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 /* ─── Types ─── */
 export type CameraPresetName = "front" | "back" | "left" | "right" | "top" | "default";
@@ -22,6 +25,29 @@ interface CameraPresetData {
   position: [number, number, number];
   target: [number, number, number];
   up?: [number, number, number];
+}
+
+interface WallGeometry {
+  length: number;
+  centerX: number;
+  centerZ: number;
+  angle: number;
+  normalX: number;
+  normalZ: number;
+  startX: number;
+  startZ: number;
+  endX: number;
+  endZ: number;
+  tangentX: number;
+  tangentZ: number;
+}
+
+export interface OpeningPlacementTool {
+  kind: "door" | "window";
+  styleId: string;
+  widthM: number;
+  heightM: number;
+  bottomM: number;
 }
 
 interface Props {
@@ -39,6 +65,11 @@ interface Props {
   onSelect?: (id: string | null) => void;
   onFurnitureUpdate?: (id: string, attrs: Partial<PlacedFurniture>) => void;
   onDropFurniture?: (item: PlacedFurniture) => void;
+  placementTool?: OpeningPlacementTool | null;
+  onDoorAdd?: (item: DoorPlacement) => void;
+  onWindowAdd?: (item: WindowPlacement) => void;
+  onDoorUpdate?: (id: string, attrs: Partial<DoorPlacement>) => void;
+  onWindowUpdate?: (id: string, attrs: Partial<WindowPlacement>) => void;
 }
 
 /* ─── Error Boundary for GLB models ─── */
@@ -75,14 +106,29 @@ function useRoomGeometry(config: RoomConfig) {
       shapePoints.push([x3d, -z3d]);
     }
 
-    const walls = floorVertices.map((v, i) => {
+    const walls: WallGeometry[] = floorVertices.map((v, i) => {
       const next = floorVertices[(i + 1) % floorVertices.length];
       const dx = next[0] - v[0];
       const dz = next[2] - v[2];
       const length = Math.sqrt(dx * dx + dz * dz);
       const normalX = length > 0 ? -dz / length : 0;
       const normalZ = length > 0 ? dx / length : 0;
-      return { length, centerX: (v[0] + next[0]) / 2, centerZ: (v[2] + next[2]) / 2, angle: Math.atan2(-dz, dx), normalX, normalZ };
+      const tangentX = length > 0 ? dx / length : 0;
+      const tangentZ = length > 0 ? dz / length : 0;
+      return {
+        length,
+        centerX: (v[0] + next[0]) / 2,
+        centerZ: (v[2] + next[2]) / 2,
+        angle: Math.atan2(-dz, dx),
+        normalX,
+        normalZ,
+        startX: v[0],
+        startZ: v[2],
+        endX: next[0],
+        endZ: next[2],
+        tangentX,
+        tangentZ,
+      };
     });
 
     return { shapePoints, floorVertices, walls, bbox, wallH };
@@ -179,15 +225,24 @@ function RoomCeiling({ shapePoints, color, height }: { shapePoints: [number, num
 
 /* ─── R3F: Walls ─── */
 function RoomWalls({
-  walls, wallH, color, hideIdx,
+  walls, wallH, color, hideIdx, disableAutoHide, onWallPointerDown,
 }: {
-  walls: { length: number; centerX: number; centerZ: number; angle: number; normalX: number; normalZ: number }[];
-  wallH: number; color: string; hideIdx?: number;
+  walls: WallGeometry[];
+  wallH: number;
+  color: string;
+  hideIdx?: number;
+  disableAutoHide?: boolean;
+  onWallPointerDown?: (wallIndex: number, event: ThreeEvent<PointerEvent>) => void;
 }) {
   const meshRefs = useRef<Map<number, THREE.Mesh>>(new Map());
   const { camera } = useThree();
 
   useFrame(() => {
+    if (disableAutoHide) {
+      meshRefs.current.forEach((mesh) => { mesh.visible = true; });
+      return;
+    }
+
     const camPos = camera.position;
     const scores: { idx: number; dot: number }[] = [];
     for (let i = 0; i < walls.length; i++) {
@@ -209,7 +264,9 @@ function RoomWalls({
         if (wall.length < 0.01) return null;
         return (
           <mesh key={i} ref={(el) => { if (el) meshRefs.current.set(i, el); else meshRefs.current.delete(i); }}
-            position={[wall.centerX, wallH / 2, wall.centerZ]} rotation={[0, wall.angle, 0]}>
+            position={[wall.centerX, wallH / 2, wall.centerZ]}
+            rotation={[0, wall.angle, 0]}
+            onPointerDown={onWallPointerDown ? (event) => onWallPointerDown(i, event) : undefined}>
             <boxGeometry args={[wall.length, wallH, WALL_THICKNESS]} />
             <meshStandardMaterial color={color} side={THREE.DoubleSide} />
           </mesh>
@@ -464,6 +521,382 @@ function InteractiveFurniture({
   );
 }
 
+function getOpeningAlongBounds(wallLength: number, openingWidth: number) {
+  const halfWidth = openingWidth / 2;
+  const minCenter = Math.min(wallLength / 2, halfWidth + OPENING_MARGIN_M);
+  const maxCenter = Math.max(minCenter, wallLength - halfWidth - OPENING_MARGIN_M);
+  return { minCenter, maxCenter };
+}
+
+function getOpeningTransform(
+  wall: WallGeometry,
+  positionAlongWall: number,
+  bottomM: number,
+  heightM: number,
+) {
+  const centerAlong = clamp(positionAlongWall, 0, 1) * wall.length;
+  return {
+    x: wall.startX + wall.tangentX * centerAlong,
+    y: bottomM + heightM / 2,
+    z: wall.startZ + wall.tangentZ * centerAlong,
+  };
+}
+
+function DoorMesh({ door, wall, selected }: { door: DoorPlacement; wall: WallGeometry; selected?: boolean }) {
+  const widthM = door.widthM;
+  const heightM = door.heightM ?? 2.1;
+  const bottomM = clamp(door.bottomM ?? 0, 0, Number.MAX_SAFE_INTEGER);
+  const position = getOpeningTransform(wall, door.positionAlongWall, bottomM, heightM);
+  const frameColor = door.styleId === "sliding" ? "#bca58a" : "#8b6849";
+  const panelColor = door.styleId === "bifold" ? "#d4c2ac" : "#ede2d2";
+  const sideWidth = 0.05;
+  const topHeight = 0.06;
+
+  return (
+    <group position={[position.x, position.y, position.z]} rotation={[0, wall.angle, 0]}>
+      <mesh position={[0, 0, 0]} renderOrder={1}>
+        <boxGeometry args={[widthM - 0.02, heightM - 0.02, OPENING_DEPTH * 0.72]} />
+        <meshStandardMaterial color="#2d2218" roughness={0.95} metalness={0.02} />
+      </mesh>
+
+      <mesh position={[widthM / 2 - sideWidth / 2, 0, 0]} renderOrder={2}>
+        <boxGeometry args={[sideWidth, heightM, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} />
+      </mesh>
+      <mesh position={[-widthM / 2 + sideWidth / 2, 0, 0]} renderOrder={2}>
+        <boxGeometry args={[sideWidth, heightM, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, heightM / 2 - topHeight / 2, 0]} renderOrder={2}>
+        <boxGeometry args={[widthM, topHeight, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} />
+      </mesh>
+
+      {door.styleId === "double" ? (
+        <>
+          <mesh position={[-widthM * 0.24, 0, -OPENING_DEPTH * 0.18]} renderOrder={3}>
+            <boxGeometry args={[widthM * 0.44, heightM - 0.12, OPENING_DEPTH * 0.2]} />
+            <meshStandardMaterial color={panelColor} roughness={0.85} />
+          </mesh>
+          <mesh position={[widthM * 0.24, 0, -OPENING_DEPTH * 0.18]} renderOrder={3}>
+            <boxGeometry args={[widthM * 0.44, heightM - 0.12, OPENING_DEPTH * 0.2]} />
+            <meshStandardMaterial color={panelColor} roughness={0.85} />
+          </mesh>
+        </>
+      ) : door.styleId === "sliding" ? (
+        <>
+          <mesh position={[-widthM * 0.12, 0, -OPENING_DEPTH * 0.16]} renderOrder={3}>
+            <boxGeometry args={[widthM * 0.62, heightM - 0.12, OPENING_DEPTH * 0.12]} />
+            <meshStandardMaterial color="#d7e5ef" roughness={0.2} metalness={0.05} transparent opacity={0.65} />
+          </mesh>
+          <mesh position={[widthM * 0.12, 0, OPENING_DEPTH * 0.02]} renderOrder={3}>
+            <boxGeometry args={[widthM * 0.62, heightM - 0.12, OPENING_DEPTH * 0.12]} />
+            <meshStandardMaterial color="#c6d7e4" roughness={0.2} metalness={0.05} transparent opacity={0.5} />
+          </mesh>
+        </>
+      ) : door.styleId === "bifold" ? (
+        <>
+          <mesh position={[-widthM * 0.18, 0, -OPENING_DEPTH * 0.16]} renderOrder={3}>
+            <boxGeometry args={[widthM * 0.26, heightM - 0.12, OPENING_DEPTH * 0.18]} />
+            <meshStandardMaterial color={panelColor} roughness={0.85} />
+          </mesh>
+          <mesh position={[widthM * 0.08, 0, -OPENING_DEPTH * 0.1]} renderOrder={3}>
+            <boxGeometry args={[widthM * 0.26, heightM - 0.12, OPENING_DEPTH * 0.18]} />
+            <meshStandardMaterial color={panelColor} roughness={0.85} />
+          </mesh>
+        </>
+      ) : (
+        <mesh position={[0, 0, -OPENING_DEPTH * 0.16]} renderOrder={3}>
+          <boxGeometry args={[widthM - 0.14, heightM - 0.12, OPENING_DEPTH * 0.2]} />
+          <meshStandardMaterial color={panelColor} roughness={0.85} />
+        </mesh>
+      )}
+
+      {selected && (
+        <mesh position={[0, 0, 0]} renderOrder={10}>
+          <boxGeometry args={[widthM + 0.08, heightM + 0.08, OPENING_DEPTH + 0.04]} />
+          <meshBasicMaterial color="#6B4226" wireframe transparent opacity={0.9} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function WindowMesh({ windowItem, wall, selected }: { windowItem: WindowPlacement; wall: WallGeometry; selected?: boolean }) {
+  const widthM = windowItem.widthM;
+  const heightM = windowItem.heightM ?? 1.2;
+  const bottomM = clamp(windowItem.sillHeightM, 0, Number.MAX_SAFE_INTEGER);
+  const position = getOpeningTransform(wall, windowItem.positionAlongWall, bottomM, heightM);
+  const frameColor = windowItem.styleId === "bay" ? "#b7c2cb" : "#e8edf1";
+
+  return (
+    <group position={[position.x, position.y, position.z]} rotation={[0, wall.angle, 0]}>
+      <mesh renderOrder={1}>
+        <boxGeometry args={[widthM - 0.02, heightM - 0.02, OPENING_DEPTH * 0.78]} />
+        <meshStandardMaterial color="#1f2830" roughness={0.9} metalness={0.05} />
+      </mesh>
+
+      <mesh position={[widthM / 2 - 0.025, 0, 0]} renderOrder={2}>
+        <boxGeometry args={[0.05, heightM, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
+      </mesh>
+      <mesh position={[-widthM / 2 + 0.025, 0, 0]} renderOrder={2}>
+        <boxGeometry args={[0.05, heightM, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
+      </mesh>
+      <mesh position={[0, heightM / 2 - 0.025, 0]} renderOrder={2}>
+        <boxGeometry args={[widthM, 0.05, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
+      </mesh>
+      <mesh position={[0, -heightM / 2 + 0.025, 0]} renderOrder={2}>
+        <boxGeometry args={[widthM, 0.05, OPENING_DEPTH]} />
+        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
+      </mesh>
+      <mesh position={[0, 0, 0]} renderOrder={3}>
+        <boxGeometry args={[widthM - 0.1, heightM - 0.1, OPENING_DEPTH * 0.22]} />
+        <meshPhysicalMaterial color="#bfe0f5" roughness={0.08} transmission={0.7} transparent opacity={0.55} />
+      </mesh>
+      <mesh position={[0, 0, 0]} renderOrder={4}>
+        <boxGeometry args={[0.04, heightM - 0.08, OPENING_DEPTH * 0.24]} />
+        <meshStandardMaterial color="#f7fafc" roughness={0.35} metalness={0.02} />
+      </mesh>
+      <mesh position={[0, -heightM / 2 - 0.025, OPENING_DEPTH * 0.18]} renderOrder={4}>
+        <boxGeometry args={[widthM + 0.1, 0.05, OPENING_DEPTH * 0.5]} />
+        <meshStandardMaterial color="#f7fafc" roughness={0.35} metalness={0.02} />
+      </mesh>
+
+      {selected && (
+        <mesh position={[0, 0, 0]} renderOrder={10}>
+          <boxGeometry args={[widthM + 0.08, heightM + 0.08, OPENING_DEPTH + 0.04]} />
+          <meshBasicMaterial color="#2f7bb8" wireframe transparent opacity={0.9} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function InteractiveDoorItem({
+  door, wall, wallH, selected, onSelect, onUpdate, controlsRef,
+}: {
+  door: DoorPlacement;
+  wall: WallGeometry;
+  wallH: number;
+  selected: boolean;
+  onSelect: (id: string) => void;
+  onUpdate: (id: string, attrs: Partial<DoorPlacement>) => void;
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  const isDragging = useRef(false);
+  const dragPlane = useMemo(
+    () => new THREE.Plane(new THREE.Vector3(wall.normalX, 0, wall.normalZ), -(wall.normalX * wall.centerX + wall.normalZ * wall.centerZ)),
+    [wall],
+  );
+  const dragAlongOffset = useRef(0);
+  const dragCenterYOffset = useRef(0);
+
+  const widthM = door.widthM;
+  const heightM = door.heightM ?? 2.1;
+  const bottomM = clamp(door.bottomM ?? 0, 0, Math.max(0, wallH - heightM));
+  const currentCenterAlong = clamp(door.positionAlongWall, 0, 1) * wall.length;
+  const currentCenterY = bottomM + heightM / 2;
+
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    onSelect(door.id);
+    isDragging.current = true;
+    if (controlsRef.current) controlsRef.current.enabled = false;
+
+    const point = new THREE.Vector3();
+    e.ray.intersectPlane(dragPlane, point);
+    const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
+    dragAlongOffset.current = currentCenterAlong - projectedAlong;
+    dragCenterYOffset.current = currentCenterY - point.y;
+    (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
+  }, [controlsRef, currentCenterAlong, currentCenterY, door.id, dragPlane, onSelect, wall]);
+
+  const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (!isDragging.current) return;
+    e.stopPropagation();
+    const point = new THREE.Vector3();
+    e.ray.intersectPlane(dragPlane, point);
+    const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
+    const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, widthM);
+    const centerAlong = clamp(projectedAlong + dragAlongOffset.current, minCenter, maxCenter);
+    const centerY = point.y + dragCenterYOffset.current;
+    onUpdate(door.id, {
+      positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
+      bottomM: clamp(centerY - heightM / 2, 0, Math.max(0, wallH - heightM)),
+    });
+  }, [door.id, dragPlane, heightM, onUpdate, wall, wallH, widthM]);
+
+  const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    if (controlsRef.current) controlsRef.current.enabled = true;
+    (e.target as HTMLElement)?.releasePointerCapture?.(e.pointerId);
+  }, [controlsRef]);
+
+  return (
+    <group onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
+      <DoorMesh door={door} wall={wall} selected={selected} />
+    </group>
+  );
+}
+
+function InteractiveWindowItem({
+  windowItem, wall, wallH, selected, onSelect, onUpdate, controlsRef,
+}: {
+  windowItem: WindowPlacement;
+  wall: WallGeometry;
+  wallH: number;
+  selected: boolean;
+  onSelect: (id: string) => void;
+  onUpdate: (id: string, attrs: Partial<WindowPlacement>) => void;
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  const isDragging = useRef(false);
+  const dragPlane = useMemo(
+    () => new THREE.Plane(new THREE.Vector3(wall.normalX, 0, wall.normalZ), -(wall.normalX * wall.centerX + wall.normalZ * wall.centerZ)),
+    [wall],
+  );
+  const dragAlongOffset = useRef(0);
+  const dragCenterYOffset = useRef(0);
+
+  const widthM = windowItem.widthM;
+  const heightM = windowItem.heightM ?? 1.2;
+  const bottomM = clamp(windowItem.sillHeightM, 0, Math.max(0, wallH - heightM));
+  const currentCenterAlong = clamp(windowItem.positionAlongWall, 0, 1) * wall.length;
+  const currentCenterY = bottomM + heightM / 2;
+
+  const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    onSelect(windowItem.id);
+    isDragging.current = true;
+    if (controlsRef.current) controlsRef.current.enabled = false;
+
+    const point = new THREE.Vector3();
+    e.ray.intersectPlane(dragPlane, point);
+    const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
+    dragAlongOffset.current = currentCenterAlong - projectedAlong;
+    dragCenterYOffset.current = currentCenterY - point.y;
+    (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
+  }, [controlsRef, currentCenterAlong, currentCenterY, dragPlane, onSelect, wall, windowItem.id]);
+
+  const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (!isDragging.current) return;
+    e.stopPropagation();
+    const point = new THREE.Vector3();
+    e.ray.intersectPlane(dragPlane, point);
+    const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
+    const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, widthM);
+    const centerAlong = clamp(projectedAlong + dragAlongOffset.current, minCenter, maxCenter);
+    const centerY = point.y + dragCenterYOffset.current;
+    onUpdate(windowItem.id, {
+      positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
+      sillHeightM: clamp(centerY - heightM / 2, 0, Math.max(0, wallH - heightM)),
+    });
+  }, [dragPlane, heightM, onUpdate, wall, wallH, widthM, windowItem.id]);
+
+  const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    if (controlsRef.current) controlsRef.current.enabled = true;
+    (e.target as HTMLElement)?.releasePointerCapture?.(e.pointerId);
+  }, [controlsRef]);
+
+  return (
+    <group onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
+      <WindowMesh windowItem={windowItem} wall={wall} selected={selected} />
+    </group>
+  );
+}
+
+function RoomOpenings({
+  doors, windows, walls,
+}: {
+  doors: DoorPlacement[];
+  windows: WindowPlacement[];
+  walls: WallGeometry[];
+}) {
+  return (
+    <group>
+      {doors.map((door) => {
+        const wall = walls[door.wallIndex];
+        if (!wall) return null;
+        return <DoorMesh key={door.id} door={door} wall={wall} />;
+      })}
+      {windows.map((windowItem) => {
+        const wall = walls[windowItem.wallIndex];
+        if (!wall) return null;
+        return <WindowMesh key={windowItem.id} windowItem={windowItem} wall={wall} />;
+      })}
+    </group>
+  );
+}
+
+function InteractiveOpenings({
+  doors,
+  windows,
+  walls,
+  wallH,
+  selectedOpening,
+  onSelectOpening,
+  onDoorUpdate,
+  onWindowUpdate,
+  controlsRef,
+}: {
+  doors: DoorPlacement[];
+  windows: WindowPlacement[];
+  walls: WallGeometry[];
+  wallH: number;
+  selectedOpening: { kind: "door" | "window"; id: string } | null;
+  onSelectOpening: (opening: { kind: "door" | "window"; id: string } | null) => void;
+  onDoorUpdate?: (id: string, attrs: Partial<DoorPlacement>) => void;
+  onWindowUpdate?: (id: string, attrs: Partial<WindowPlacement>) => void;
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  return (
+    <group>
+      {doors.map((door) => {
+        const wall = walls[door.wallIndex];
+        if (!wall) return null;
+        return onDoorUpdate ? (
+          <InteractiveDoorItem
+            key={door.id}
+            door={door}
+            wall={wall}
+            wallH={wallH}
+            selected={selectedOpening?.kind === "door" && selectedOpening.id === door.id}
+            onSelect={(id) => onSelectOpening({ kind: "door", id })}
+            onUpdate={onDoorUpdate}
+            controlsRef={controlsRef}
+          />
+        ) : (
+          <DoorMesh key={door.id} door={door} wall={wall} selected={selectedOpening?.kind === "door" && selectedOpening.id === door.id} />
+        );
+      })}
+      {windows.map((windowItem) => {
+        const wall = walls[windowItem.wallIndex];
+        if (!wall) return null;
+        return onWindowUpdate ? (
+          <InteractiveWindowItem
+            key={windowItem.id}
+            windowItem={windowItem}
+            wall={wall}
+            wallH={wallH}
+            selected={selectedOpening?.kind === "window" && selectedOpening.id === windowItem.id}
+            onSelect={(id) => onSelectOpening({ kind: "window", id })}
+            onUpdate={onWindowUpdate}
+            controlsRef={controlsRef}
+          />
+        ) : (
+          <WindowMesh key={windowItem.id} windowItem={windowItem} wall={wall} selected={selectedOpening?.kind === "window" && selectedOpening.id === windowItem.id} />
+        );
+      })}
+    </group>
+  );
+}
+
 /* ─── R3F: Ceiling light grid — one point light every 1 m ─── */
 function CeilingLightGrid({ bbox, wallH }: { bbox: { width: number; height: number }; wallH: number }) {
   const lights = useMemo(() => {
@@ -559,10 +992,16 @@ const Room3DPreview = ({
   onSelect,
   onFurnitureUpdate,
   onDropFurniture,
+  placementTool,
+  onDoorAdd,
+  onWindowAdd,
+  onDoorUpdate,
+  onWindowUpdate,
 }: Props) => {
   const { shapePoints, walls, bbox, wallH } = useRoomGeometry(roomConfig);
   const presets = useMemo(() => getCameraPresets(bbox, wallH), [bbox, wallH]);
   const controlsRef = useRef<any>(null);
+  const [selectedOpening, setSelectedOpening] = useState<{ kind: "door" | "window"; id: string } | null>(null);
 
   // For non-interactive: manage preset internally
   const effectiveInitialPreset = topDown ? "top" : (initialPreset ?? "default");
@@ -580,6 +1019,8 @@ const Room3DPreview = ({
   const hasFurniture = furniture.length > 0;
   const isLocked = topDown || cameraLocked;
   const hideStructure = topDown; // In top-down mode, hide walls and ceiling
+  const interactiveOpenings = !topDown && (!!placementTool || !!onDoorUpdate || !!onWindowUpdate);
+  const interactiveScene = interactive || interactiveOpenings;
 
   /* ── Drag-and-drop from furniture library ── */
   const containerRef = useRef<HTMLDivElement>(null);
@@ -629,6 +1070,48 @@ const Room3DPreview = ({
     });
   }, [onDropFurniture, bbox]);
 
+  const handleWallPointerDown = useCallback((wallIndex: number, e: ThreeEvent<PointerEvent>) => {
+    if (!placementTool) return;
+
+    const wall = walls[wallIndex];
+    if (!wall || wall.length <= 0) return;
+
+    e.stopPropagation();
+    const point = e.point;
+    const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
+    const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, placementTool.widthM);
+    const centerAlong = clamp(projectedAlong, minCenter, maxCenter);
+    const bottomM = clamp(point.y - placementTool.heightM / 2, 0, Math.max(0, wallH - placementTool.heightM));
+
+    if (placementTool.kind === "door" && onDoorAdd) {
+      const item: DoorPlacement = {
+        id: `door-${Date.now()}`,
+        wallIndex,
+        positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
+        widthM: placementTool.widthM,
+        heightM: placementTool.heightM,
+        bottomM,
+        styleId: placementTool.styleId,
+      };
+      onDoorAdd(item);
+      setSelectedOpening({ kind: "door", id: item.id });
+    }
+
+    if (placementTool.kind === "window" && onWindowAdd) {
+      const item: WindowPlacement = {
+        id: `window-${Date.now()}`,
+        wallIndex,
+        positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
+        widthM: placementTool.widthM,
+        heightM: placementTool.heightM,
+        sillHeightM: bottomM,
+        styleId: placementTool.styleId,
+      };
+      onWindowAdd(item);
+      setSelectedOpening({ kind: "window", id: item.id });
+    }
+  }, [onDoorAdd, onWindowAdd, placementTool, wallH, walls]);
+
   return (
     <div
       ref={containerRef}
@@ -648,14 +1131,22 @@ const Room3DPreview = ({
           <RoomFloor shapePoints={shapePoints} color={roomConfig.floorColor || "#B8956A"} />
           {!hideStructure && (
             <>
-              <RoomWalls walls={walls} wallH={wallH} color={roomConfig.wallColor || "#F0F0F0"} hideIdx={hideWallIdx} />
+              <RoomWalls
+                walls={walls}
+                wallH={wallH}
+                color={roomConfig.wallColor || "#F0F0F0"}
+                hideIdx={hideWallIdx}
+                disableAutoHide={interactiveOpenings}
+                onWallPointerDown={placementTool ? handleWallPointerDown : undefined}
+              />
+              {!interactiveOpenings && <RoomOpenings doors={roomConfig.doors} windows={roomConfig.windows} walls={walls} />}
               <RoomCeiling shapePoints={shapePoints} color={roomConfig.ceilingColor || "#FFFFFF"} height={wallH} />
             </>
           )}
 
           {interactive && onSelect && onFurnitureUpdate ? (
             <>
-              <FloorClickPlane onDeselect={() => onSelect(null)} />
+              <FloorClickPlane onDeselect={() => { onSelect(null); setSelectedOpening(null); }} />
               <InteractiveFurniture
                 furniture={furniture}
                 bbox={bbox}
@@ -669,11 +1160,29 @@ const Room3DPreview = ({
             <FurnitureItems furniture={furniture} bbox={bbox} />
           )}
 
+          {!interactive && interactiveOpenings && (
+            <FloorClickPlane onDeselect={() => setSelectedOpening(null)} />
+          )}
+
+          {!hideStructure && interactiveOpenings && (
+            <InteractiveOpenings
+              doors={roomConfig.doors}
+              windows={roomConfig.windows}
+              walls={walls}
+              wallH={wallH}
+              selectedOpening={selectedOpening}
+              onSelectOpening={setSelectedOpening}
+              onDoorUpdate={onDoorUpdate}
+              onWindowUpdate={onWindowUpdate}
+              controlsRef={controlsRef}
+            />
+          )}
+
           {(showGrid || topDown) && (
             <gridHelper args={[20, 40, "#c5c5c5", "#e0e0e0"]} position={[0, -0.005, 0]} />
           )}
 
-          {interactive ? (
+          {interactiveScene ? (
             <InteractiveOrbitalControls preset={preset} locked={isLocked} innerRef={controlsRef} />
           ) : (
             <CameraController preset={preset} locked={isLocked} />

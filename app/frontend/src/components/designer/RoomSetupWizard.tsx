@@ -14,7 +14,7 @@ import {
   getRoomBoundingBox,
   getWallSegments,
 } from "@/lib/room-geometry";
-import Room3DPreview from "./Room3DPreview";
+import Room3DPreview, { type OpeningPlacementTool } from "./Room3DPreview";
 
 /* ═══════════════════════════════════════════════════
    Constants
@@ -24,16 +24,16 @@ const STEPS = [
   { title: "Set the shape and size", subtitle: "Choose the room shape for your design." },
   { title: "Adjust your dimensions", subtitle: "Click a wall on the floor plan to adjust its length." },
   { title: "Set wall height", subtitle: "Adjust how tall the room's walls are." },
-  { title: "Add doors & windows", subtitle: "Select a door or window style, then click a wall in the floor plan to place it." },
+  { title: "Add doors & windows", subtitle: "Select a style, then click and drag it directly on the 3D walls to set its X, Y and Z position." },
   { title: "Choose your room style", subtitle: "Pick colors for walls, floor, and ceiling." },
 ];
 
 /* ── Door style catalog ── */
-const DOOR_STYLES: { id: string; label: string; description: string; widthM: number }[] = [
-  { id: "single",  label: "Single Door",  description: "Standard 900mm swing door",  widthM: 0.9  },
-  { id: "double",  label: "Double Door",  description: "French / double swing door",  widthM: 1.5  },
-  { id: "sliding", label: "Sliding Door", description: "Space-saving sliding panel",   widthM: 1.5  },
-  { id: "bifold",  label: "Bi-fold Door", description: "Compact folding door panels",  widthM: 1.2  },
+const DOOR_STYLES: { id: string; label: string; description: string; widthM: number; heightM: number }[] = [
+  { id: "single",  label: "Single Door",  description: "Standard 900mm swing door",  widthM: 0.9, heightM: 2.1 },
+  { id: "double",  label: "Double Door",  description: "French / double swing door",  widthM: 1.5, heightM: 2.1 },
+  { id: "sliding", label: "Sliding Door", description: "Space-saving sliding panel",   widthM: 1.5, heightM: 2.1 },
+  { id: "bifold",  label: "Bi-fold Door", description: "Compact folding door panels",  widthM: 1.2, heightM: 2.1 },
 ];
 
 /* ── Window style catalog ── */
@@ -137,6 +137,34 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
   const [selectedDoorStyleId, setSelectedDoorStyleId] = useState<string | null>(null);
   const [selectedWindowStyleId, setSelectedWindowStyleId] = useState<string | null>(null);
 
+  const placementTool = useMemo<OpeningPlacementTool | null>(() => {
+    if (dwTab === "doors" && selectedDoorStyleId) {
+      const style = DOOR_STYLES.find((item) => item.id === selectedDoorStyleId);
+      if (!style) return null;
+      return {
+        kind: "door",
+        styleId: style.id,
+        widthM: style.widthM,
+        heightM: style.heightM,
+        bottomM: 0,
+      };
+    }
+
+    if (dwTab === "windows" && selectedWindowStyleId) {
+      const style = WINDOW_STYLES.find((item) => item.id === selectedWindowStyleId);
+      if (!style) return null;
+      return {
+        kind: "window",
+        styleId: style.id,
+        widthM: style.widthM,
+        heightM: style.heightM,
+        bottomM: style.sillHeightM,
+      };
+    }
+
+    return null;
+  }, [dwTab, selectedDoorStyleId, selectedWindowStyleId]);
+
   // Build current draft config
   const draftConfig = useMemo(
     (): RoomConfig => ({
@@ -159,6 +187,8 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
     // Reset door/window placements when shape changes (wall indices would be invalid)
     setDoors([]);
     setWindows([]);
+    setSelectedDoorStyleId(null);
+    setSelectedWindowStyleId(null);
   }, []);
 
   const handleNext = useCallback(() => {
@@ -324,41 +354,18 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
             }}
           />
         ) : step === 3 ? (
-          <DoorsWindowsFloorPlan
-            config={draftConfig}
-            doors={doors}
-            windows={windows}
-            activeTab={dwTab}
-            selectedDoorStyleId={selectedDoorStyleId}
-            selectedWindowStyleId={selectedWindowStyleId}
-            onWallClick={(wallIdx) => {
-              if (dwTab === "doors" && selectedDoorStyleId) {
-                const style = DOOR_STYLES.find((s) => s.id === selectedDoorStyleId);
-                if (!style) return;
-                const newDoor: DoorPlacement = {
-                  id: `door-${Date.now()}`,
-                  wallIndex: wallIdx,
-                  positionAlongWall: 0.5,
-                  widthM: style.widthM,
-                  styleId: style.id,
-                };
-                setDoors((prev) => [...prev.filter((d) => d.wallIndex !== wallIdx), newDoor]);
-              } else if (dwTab === "windows" && selectedWindowStyleId) {
-                const style = WINDOW_STYLES.find((s) => s.id === selectedWindowStyleId);
-                if (!style) return;
-                const newWindow: WindowPlacement = {
-                  id: `win-${Date.now()}`,
-                  wallIndex: wallIdx,
-                  positionAlongWall: 0.5,
-                  widthM: style.widthM,
-                  heightM: style.heightM,
-                  sillHeightM: style.sillHeightM,
-                  styleId: style.id,
-                };
-                setWindows((prev) => [...prev.filter((w) => w.wallIndex !== wallIdx), newWindow]);
-              }
-            }}
-          />
+          <div className="h-full w-full">
+            <Room3DPreview
+              roomConfig={draftConfig}
+              furniture={[]}
+              placementTool={placementTool}
+              onDoorAdd={(door) => setDoors((prev) => [...prev, door])}
+              onWindowAdd={(windowItem) => setWindows((prev) => [...prev, windowItem])}
+              onDoorUpdate={(id, attrs) => setDoors((prev) => prev.map((item) => item.id === id ? { ...item, ...attrs } : item))}
+              onWindowUpdate={(id, attrs) => setWindows((prev) => prev.map((item) => item.id === id ? { ...item, ...attrs } : item))}
+              showGrid
+            />
+          </div>
         ) : (
           <div className="h-full w-full">
             <Room3DPreview
@@ -870,8 +877,8 @@ const StepDoorsWindows = ({
       {/* Instruction */}
       <p className="text-[12px] leading-relaxed text-[hsl(30,10%,50%)]">
         {isAnythingSelected
-          ? "Click a wall in the floor plan on the right to place."
-          : "Select a style below, then click a wall in the preview to place it."}
+          ? "Click a wall in the 3D preview to place it, then drag the object directly on the wall to refine the position."
+          : "Select a style below, then place and drag it on the 3D walls in the preview."}
       </p>
 
       {/* Style cards */}
@@ -937,7 +944,7 @@ const StepDoorsWindows = ({
             <div key={d.id} className="flex items-center gap-2 rounded-lg bg-[hsl(28,30%,92%)] px-3 py-2">
               <DoorOpen size={13} className="shrink-0 text-[hsl(28,35%,38%)]" />
               <span className="flex-1 text-xs font-medium text-[hsl(28,20%,25%)]">
-                {DOOR_STYLES.find((s) => s.id === d.styleId)?.label ?? "Door"} — Wall {d.wallIndex + 1}
+                {DOOR_STYLES.find((s) => s.id === d.styleId)?.label ?? "Door"} — Wall {d.wallIndex + 1} · X {Math.round(d.positionAlongWall * 100)}% · Y {Math.round((d.bottomM ?? 0) * 100)}cm
               </span>
               <button
                 onClick={() => onDoorsChange((prev) => prev.filter((x) => x.id !== d.id))}
@@ -952,7 +959,7 @@ const StepDoorsWindows = ({
             <div key={w.id} className="flex items-center gap-2 rounded-lg bg-[hsl(200,25%,92%)] px-3 py-2">
               <AppWindow size={13} className="shrink-0 text-[hsl(200,50%,40%)]" />
               <span className="flex-1 text-xs font-medium text-[hsl(28,20%,25%)]">
-                {WINDOW_STYLES.find((s) => s.id === w.styleId)?.label ?? "Window"} — Wall {w.wallIndex + 1}
+                {WINDOW_STYLES.find((s) => s.id === w.styleId)?.label ?? "Window"} — Wall {w.wallIndex + 1} · X {Math.round(w.positionAlongWall * 100)}% · Y {Math.round(w.sillHeightM * 100)}cm
               </span>
               <button
                 onClick={() => onWindowsChange((prev) => prev.filter((x) => x.id !== w.id))}
@@ -968,204 +975,9 @@ const StepDoorsWindows = ({
 
       <div className="rounded-xl border border-[hsl(30,15%,86%)] bg-white/60 p-3">
         <p className="text-[11px] text-[hsl(30,10%,50%)] leading-relaxed">
-          This step is optional — you can skip it and continue without adding doors or windows.
+          This step is optional. Doors and windows you place here stay embedded in the room when you move on to furniture design.
         </p>
       </div>
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════
-   Doors & Windows floor plan (right panel, step 4)
-   ═══════════════════════════════════════════════════ */
-
-const DoorsWindowsFloorPlan = ({
-  config, doors, windows, activeTab,
-  selectedDoorStyleId, selectedWindowStyleId,
-  onWallClick,
-}: {
-  config: RoomConfig;
-  doors: DoorPlacement[];
-  windows: WindowPlacement[];
-  activeTab: "doors" | "windows";
-  selectedDoorStyleId: string | null;
-  selectedWindowStyleId: string | null;
-  onWallClick: (wallIdx: number) => void;
-}) => {
-  const [hoveredWall, setHoveredWall] = useState<number | null>(null);
-
-  const poly = getRoomPolygon(config);
-  const bbox = getRoomBoundingBox(config);
-  const n = poly.length / 2;
-
-  const viewW = 900;
-  const viewH = 700;
-  const pad = 110;
-  const scale = Math.min((viewW - pad * 2) / bbox.width, (viewH - pad * 2) / bbox.height);
-  const roomW = bbox.width * scale;
-  const roomH = bbox.height * scale;
-  const ox = (viewW - roomW) / 2;
-  const oy = (viewH - roomH) / 2;
-
-  const pts = Array.from({ length: n }).map((_, i) => ({
-    x: poly[i * 2] * scale + ox,
-    y: poly[i * 2 + 1] * scale + oy,
-  }));
-
-  const isAnythingSelected =
-    (activeTab === "doors" && !!selectedDoorStyleId) ||
-    (activeTab === "windows" && !!selectedWindowStyleId);
-
-  return (
-    <div className="relative flex h-full w-full items-center justify-center">
-      {isAnythingSelected && (
-        <div className="absolute top-5 left-0 right-0 z-10 text-center pointer-events-none">
-          <span className="rounded-full bg-[hsl(28,35%,32%)]/90 px-4 py-1.5 text-xs font-semibold text-white shadow">
-            Click a wall to place
-          </span>
-        </div>
-      )}
-
-      <svg
-        viewBox={`0 0 ${viewW} ${viewH}`}
-        className="max-h-full max-w-full"
-        style={{ cursor: isAnythingSelected ? "crosshair" : "default" }}
-      >
-        {/* Room fill */}
-        <polygon
-          points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
-          fill="hsl(38,20%,93%)"
-          stroke="none"
-        />
-
-        {/* Rendered wall segments with door/window cutouts */}
-        {Array.from({ length: n }).map((_, i) => {
-          const ni = (i + 1) % n;
-          const x1 = pts[i].x; const y1 = pts[i].y;
-          const x2 = pts[ni].x; const y2 = pts[ni].y;
-          const wallLenPx = Math.hypot(x2 - x1, y2 - y1);
-          if (wallLenPx < 1) return null;
-          const dx = (x2 - x1) / wallLenPx;
-          const dy = (y2 - y1) / wallLenPx;
-          // Inward normal (SVG y-down: rotate CW = (dy, -dx))
-          const nx = dy; const ny = -dx;
-
-          const door = doors.find((d) => d.wallIndex === i);
-          const win = windows.find((w) => w.wallIndex === i);
-          const hovered = hoveredWall === i;
-          const baseStroke = hovered && isAnythingSelected
-            ? "hsl(28,50%,38%)"
-            : "hsl(28,20%,30%)";
-          const strokeW = hovered ? 8 : 5;
-
-          if (door) {
-            const dW = Math.min(door.widthM * scale, wallLenPx * 0.85);
-            const centerPx = door.positionAlongWall * wallLenPx;
-            const gapStart = Math.max(0, centerPx - dW / 2);
-            const gapEnd = Math.min(wallLenPx, centerPx + dW / 2);
-            const pivX = x1 + dx * gapStart; const pivY = y1 + dy * gapStart;
-            const gapEndX = x1 + dx * gapEnd; const gapEndY = y1 + dy * gapEnd;
-            // Door leaf open position (inward from pivot by dW)
-            const openX = pivX + nx * dW; const openY = pivY + ny * dW;
-            return (
-              <g key={i}>
-                {gapStart > 2 && <line x1={x1} y1={y1} x2={pivX} y2={pivY} stroke={baseStroke} strokeWidth={strokeW} strokeLinecap="round" />}
-                {gapEnd < wallLenPx - 2 && <line x1={gapEndX} y1={gapEndY} x2={x2} y2={y2} stroke={baseStroke} strokeWidth={strokeW} strokeLinecap="round" />}
-                {/* Door leaf */}
-                <line x1={pivX} y1={pivY} x2={openX} y2={openY} stroke="hsl(28,45%,40%)" strokeWidth={2} />
-                {/* Swing arc */}
-                <path
-                  d={`M ${gapEndX} ${gapEndY} A ${dW} ${dW} 0 0 ${nx > 0 || (nx === 0 && ny > 0) ? 0 : 1} ${openX} ${openY}`}
-                  fill="hsl(28,40%,70%,0.12)"
-                  stroke="hsl(28,40%,58%)"
-                  strokeWidth={1.5}
-                  strokeDasharray="5 3"
-                />
-                {/* Hinge pin */}
-                <circle cx={pivX} cy={pivY} r={3.5} fill="hsl(28,35%,32%)" />
-              </g>
-            );
-          }
-
-          if (win) {
-            const wW = Math.min(win.widthM * scale, wallLenPx * 0.85);
-            const centerPx = win.positionAlongWall * wallLenPx;
-            const gapStart = Math.max(0, centerPx - wW / 2);
-            const gapEnd = Math.min(wallLenPx, centerPx + wW / 2);
-            const sX = x1 + dx * gapStart; const sY = y1 + dy * gapStart;
-            const eX = x1 + dx * gapEnd; const eY = y1 + dy * gapEnd;
-            const off = strokeW / 2; // half wall thickness offset for parallel lines
-            return (
-              <g key={i}>
-                {gapStart > 2 && <line x1={x1} y1={y1} x2={sX} y2={sY} stroke={baseStroke} strokeWidth={strokeW} strokeLinecap="round" />}
-                {gapEnd < wallLenPx - 2 && <line x1={eX} y1={eY} x2={x2} y2={y2} stroke={baseStroke} strokeWidth={strokeW} strokeLinecap="round" />}
-                {/* Window glazing lines (two parallel lines = cross-section of frame) */}
-                <line x1={sX - nx * off} y1={sY - ny * off} x2={eX - nx * off} y2={eY - ny * off} stroke="hsl(200,55%,48%)" strokeWidth={2} />
-                <line x1={sX + nx * off} y1={sY + ny * off} x2={eX + nx * off} y2={eY + ny * off} stroke="hsl(200,55%,48%)" strokeWidth={2} />
-                {/* Window fill (light blue tint) */}
-                <line x1={sX} y1={sY} x2={eX} y2={eY} stroke="hsl(200,60%,70%)" strokeWidth={strokeW} strokeLinecap="butt" opacity={0.35} />
-              </g>
-            );
-          }
-
-          return (
-            <line
-              key={i}
-              x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke={baseStroke}
-              strokeWidth={strokeW}
-              strokeLinecap="round"
-            />
-          );
-        })}
-
-        {/* Invisible wide click zones */}
-        {Array.from({ length: n }).map((_, i) => {
-          const ni = (i + 1) % n;
-          return (
-            <line
-              key={`hit-${i}`}
-              x1={pts[i].x} y1={pts[i].y}
-              x2={pts[ni].x} y2={pts[ni].y}
-              stroke="transparent"
-              strokeWidth={28}
-              style={{ cursor: isAnythingSelected ? "pointer" : "default" }}
-              onClick={() => { if (isAnythingSelected) onWallClick(i); }}
-              onMouseEnter={() => setHoveredWall(i)}
-              onMouseLeave={() => setHoveredWall(null)}
-            />
-          );
-        })}
-
-        {/* Wall index labels */}
-        {Array.from({ length: n }).map((_, i) => {
-          const ni = (i + 1) % n;
-          const mx = (pts[i].x + pts[ni].x) / 2;
-          const my = (pts[i].y + pts[ni].y) / 2;
-          const wallLenPx = Math.hypot(pts[ni].x - pts[i].x, pts[ni].y - pts[i].y);
-          if (wallLenPx < 24) return null;
-          const dx2 = (pts[ni].x - pts[i].x) / wallLenPx;
-          const dy2 = (pts[ni].y - pts[i].y) / wallLenPx;
-          // Outward label offset (opposite of inward normal)
-          const lx = mx - dy2 * 22;
-          const ly = my + dx2 * 22;
-          const hasDoor = doors.some((d) => d.wallIndex === i);
-          const hasWin = windows.some((w) => w.wallIndex === i);
-          return (
-            <text
-              key={`lbl-${i}`}
-              x={lx} y={ly}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize={11}
-              fontWeight="700"
-              fill={hasDoor ? "hsl(28,35%,38%)" : hasWin ? "hsl(200,55%,40%)" : "hsl(30,10%,55%)"}
-            >
-              W{i + 1}
-            </text>
-          );
-        })}
-      </svg>
     </div>
   );
 };
