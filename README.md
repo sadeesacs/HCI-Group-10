@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏠 Casa Ceylon
+#  Casa Ceylon
 
 ### Premium Sri Lankan Furniture — E-Commerce & Interactive 3D Room Designer
 
@@ -152,18 +152,18 @@ HCI-Group-10/
 
 | Method   | Endpoint                  | Description              | Auth |
 |----------|---------------------------|--------------------------|------|
-| `GET`    | `/api/health`             | Health check             | ❌   |
-| `GET`    | `/api/products`           | List all products        | ❌   |
-| `GET`    | `/api/products/:id`       | Get product by ID        | ❌   |
-| `POST`   | `/api/auth/register`      | Register new user        | ❌   |
-| `POST`   | `/api/auth/login`         | Login & receive JWT      | ❌   |
+| `GET`    | `/api/health`             | Health check             | ✅   |
+| `GET`    | `/api/products`           | List all products        | ✅   |
+| `GET`    | `/api/products/:id`       | Get product by ID        | ✅   |
+| `POST`   | `/api/auth/register`      | Register new user        | ✅   |
+| `POST`   | `/api/auth/login`         | Login & receive JWT      | ✅   |
 | `POST`   | `/api/checkout`           | Create an order          | ✅   |
 | `GET`    | `/api/checkout/:id`       | Get order details        | ✅   |
 | `GET`    | `/api/designs`            | List saved designs       | ✅   |
 | `PUT`    | `/api/designs/:id`        | Update a design          | ✅   |
 | `DELETE` | `/api/designs/:id`        | Delete a design          | ✅   |
 | `PATCH`  | `/api/designs/:id/rename` | Rename a design          | ✅   |
-| `POST`   | `/api/contact`            | Submit contact form      | ❌   |
+| `POST`   | `/api/contact`            | Submit contact form      | ✅   |
 
 ---
 
@@ -176,8 +176,3 @@ HCI-Group-10/
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
-<div align="center">
-<br/>
-<i>© 2026 Casa Ceylon · Galle Road, Colombo, Sri Lanka</i>
-</div>
