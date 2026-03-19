@@ -29,10 +29,11 @@ const userSchema = new Schema<IUserDocument>(
     timestamps: true,
     toJSON: {
       transform: (_doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
-        delete ret.password;
+        const safeRet = ret as Record<string, unknown>;
+        safeRet.id = String(safeRet._id);
+        delete safeRet._id;
+        delete safeRet.__v;
+        delete safeRet.password;
       },
     },
   }

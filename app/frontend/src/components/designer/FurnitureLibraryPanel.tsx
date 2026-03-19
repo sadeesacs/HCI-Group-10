@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
-import { Armchair, Plus, Sofa, UtensilsCrossed, Lamp, BedDouble, DoorOpen, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Armchair, Plus, Sofa, UtensilsCrossed, Lamp, BedDouble, DoorOpen, Loader2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { fetchProducts } from "@/lib/api";
@@ -11,6 +11,7 @@ export interface DragFurnitureTemplate {
   name: string;
   widthM: number;
   depthM: number;
+  heightM: number;
   color: string;
   glbPath: string;
   label: string;
@@ -23,6 +24,10 @@ export interface DragFurnitureTemplate {
 /** Product IDs that have GLB models in /models/{id}.glb */
 const GLB_PRODUCT_IDS = new Set([
   "69b4ddcde8135ff7a1a1503f", // Kandy Lounge Chair
+  "69b4ddcde8135ff7a1a15040",
+  "69b4ddcde8135ff7a1a15045",
+  "69b4ddcde8135ff7a1a1504b",
+  "69b4ddcde8135ff7a1a15050",
   "69b4ddcde8135ff7a1a15077", // Lounge Chair with Ottoman
   "69b4ddcde8135ff7a1a15047", // Dambulla Sofa
   "69b4ddcde8135ff7a1a15070", // Mid-Century Teak Armchair
@@ -30,13 +35,17 @@ const GLB_PRODUCT_IDS = new Set([
   "69b4ddcde8135ff7a1a1505c", // Mid-Century Teak Frame Sofa
   "69b4ddcde8135ff7a1a1505e", // Minimalist Daybed
   "69b4ddcde8135ff7a1a15062", // Scandinavian 2-Seater Sofa
+  "69b4ddcde8135ff7a1a15064",
+  "69b4ddcde8135ff7a1a1506a",
+  "69b4ddcde8135ff7a1a15080",
+  "69b4ddcde8135ff7a1a15087",
 ]);
 
 const hasGlbModel = (productId: string) => GLB_PRODUCT_IDS.has(productId);
 const glbPathFor = (productId: string) => `/models/${productId}.glb`;
 
 const PX_PER_M_BASE = 120; // matches Room3DPreview constant
-const CATEGORY_ICONS: Record<string, ComponentType<{ size?: number; strokeWidth?: number }>> = {
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Sofas: Sofa,
   Seating: Armchair,
   Chairs: Armchair,
@@ -75,13 +84,17 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const glbProducts = useMemo(
+    () => products.filter((p) => hasGlbModel(p.id)),
+    [products],
+  );
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await fetchProducts({ sort: "popular" });
         setProducts(data);
-        const defaultCategory = data.find((p) => p.category && p.category !== "Lighting")?.category ?? "";
+        const defaultCategory = data.find((p) => hasGlbModel(p.id) && p.category && p.category !== "Lighting")?.category ?? "";
         setActiveCategory(defaultCategory);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load furniture";
@@ -95,30 +108,60 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
   }, []);
 
   const categories = useMemo(() => {
-    const names = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
+    const names = Array.from(new Set(glbProducts.map((p) => p.category).filter(Boolean))) as string[];
     return names.filter((name) => name !== "Lighting");
-  }, [products]);
+  }, [glbProducts]);
 
   const filtered = useMemo(
-    () => products.filter((p) => (activeCategory ? p.category === activeCategory : true)),
-    [products, activeCategory]
+    () => glbProducts.filter((p) => (activeCategory ? p.category === activeCategory : true)),
+    [glbProducts, activeCategory]
   );
 
-  /* Parse W×D from dimensions string like "W 72 cm × D 78 cm × H 85 cm" */
-  const parseDimsCm = (dims?: string): { wCm: number; dCm: number } => {
-    if (!dims) return { wCm: 60, dCm: 60 };
-    const wMatch = dims.match(/W\s*(\d+)\s*cm/i) || dims.match(/L\s*(\d+)\s*cm/i) || dims.match(/(\d+)\s*cm/);
-    const dMatch = dims.match(/D\s*(\d+)\s*cm/i);
-    const wCm = wMatch ? Number(wMatch[1]) : 60;
-    const dCm = dMatch ? Number(dMatch[1]) : wCm;
-    return { wCm, dCm };
+  /* Parse product dimensions like "W 220 cm × D 92 cm × H 84 cm" or "220 x 92 x 84 cm" */
+  const parseDimsCm = (dims?: string): { lengthCm: number; widthCm: number; heightCm: number } => {
+    const defaults = { lengthCm: 60, widthCm: 60, heightCm: 80 };
+    if (!dims) return defaults;
+
+    const firstSentence = dims.split(".")[0] ?? dims;
+    const read = (pattern: RegExp) => {
+      const match = firstSentence.match(pattern);
+      return match ? Number(match[1]) : null;
+    };
+
+    const lengthLabel = read(/(?:W|L)\s*(\d+(?:\.\d+)?)\s*cm/i);
+    const widthLabel = read(/D\s*(\d+(?:\.\d+)?)\s*cm/i);
+    const heightLabel = read(/H\s*(\d+(?:\.\d+)?)\s*cm/i);
+
+    if (lengthLabel && widthLabel && heightLabel) {
+      return {
+        lengthCm: lengthLabel,
+        widthCm: widthLabel,
+        heightCm: heightLabel,
+      };
+    }
+
+    // Fallback: parse first 3 cm values in order (L/W, D, H)
+    const ordered = [...firstSentence.matchAll(/(\d+(?:\.\d+)?)\s*cm/gi)]
+      .slice(0, 3)
+      .map((m) => Number(m[1]));
+
+    if (ordered.length >= 3) {
+      return {
+        lengthCm: ordered[0],
+        widthCm: ordered[1],
+        heightCm: ordered[2],
+      };
+    }
+
+    return defaults;
   };
 
   const handleAdd = (item: Product) => {
     if (!onAddFurniture) return;
-    const { wCm, dCm } = parseDimsCm(item.dimensions);
-    const wM = wCm / 100;
-    const dM = dCm / 100;
+    const { lengthCm, widthCm, heightCm } = parseDimsCm(item.dimensions);
+    const wM = lengthCm / 100;
+    const dM = widthCm / 100;
+    const hM = heightCm / 100;
     const w = Math.round(wM * PX_PER_M_BASE);
     const h = Math.round(dM * PX_PER_M_BASE);
     const image = getImage(item);
@@ -130,6 +173,7 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
       y: 60,
       width: w,
       height: h,
+      heightM: hM,
       rotation: 0,
       color: item.colors?.[0] ? colorToHex(item.colors[0]) : "#A0896C",
       label: item.name.split(" ").map((w) => w[0]).join("").slice(0, 3),
@@ -143,11 +187,12 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
   };
 
   const handleDragStart = (e: React.DragEvent, item: Product) => {
-    const { wCm, dCm } = parseDimsCm(item.dimensions);
+    const { lengthCm, widthCm, heightCm } = parseDimsCm(item.dimensions);
     const payload: DragFurnitureTemplate = {
       name: item.name,
-      widthM: wCm / 100,
-      depthM: dCm / 100,
+      widthM: lengthCm / 100,
+      depthM: widthCm / 100,
+      heightM: heightCm / 100,
       color: item.colors?.[0] ? colorToHex(item.colors[0]) : "#A0896C",
       glbPath: glbPathFor(item.id),
       label: item.name.split(" ").map((w) => w[0]).join("").slice(0, 3),
@@ -160,12 +205,6 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
     e.dataTransfer.effectAllowed = "copy";
   };
 
-  /** Products that have 3D models available */
-  const featuredProducts = useMemo(
-    () => products.filter((p) => hasGlbModel(p.id)),
-    [products]
-  );
-
   return (
     <div className="rounded-lg border border-border bg-background">
       {/* Header */}
@@ -175,54 +214,6 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
       </div>
 
       <div className="border-t border-border px-3 pb-3 pt-2.5">
-                {/* ── Featured Section (GLB 3D models) ── */}
-                {featuredProducts.length > 0 && (
-                <div className="mb-4">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Featured · 3D Models</p>
-                  <div className="space-y-1.5">
-                  {featuredProducts.map((item) => {
-                    const { wCm, dCm } = parseDimsCm(item.dimensions);
-                    const image = getImage(item);
-                    return (
-                    <div
-                      key={item.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, item)}
-                      className="group flex gap-2 rounded-md border border-[hsl(28,35%,32%)/30] bg-[hsl(28,35%,32%)/5] p-1.5 transition-all hover:bg-accent/50 hover:shadow-sm cursor-grab active:cursor-grabbing"
-                      title="Drag into the room canvas to place"
-                    >
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-accent">
-                        <img src={image} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
-                      </div>
-                      <div className="flex flex-1 flex-col justify-between min-w-0 py-0.5">
-                        <div>
-                          <p className="truncate text-[11px] font-medium text-foreground leading-tight">{item.name}</p>
-                          {item.price && (
-                            <p className="text-[10px] text-muted-foreground">{formatPrice(item.price)}</p>
-                          )}
-                          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-                            {wCm}cm × {dCm}cm · 3D model
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAdd(item)}
-                          disabled={!onAddFurniture}
-                          className="h-5 w-full gap-1 text-[9px] font-medium rounded bg-[hsl(28,35%,32%)] text-white hover:bg-[hsl(28,35%,26%)]"
-                        >
-                          <Plus size={8} strokeWidth={2.5} />Add to Room
-                        </Button>
-                      </div>
-                    </div>
-                    );
-                  })}
-                  </div>
-                </div>
-                )}
-
-                <div className="mb-3 border-t border-border pt-3">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Catalogue</p>
-                </div>
 
         {/* Category chips */}
         <div className="mb-3 flex flex-wrap gap-1">
@@ -269,6 +260,8 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
               return (
                 <div
                   key={item.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item)}
                   className="group flex gap-2 rounded-md border border-border bg-background p-1.5 transition-all hover:bg-accent/50 hover:shadow-sm"
                 >
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-accent">

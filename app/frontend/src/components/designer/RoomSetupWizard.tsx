@@ -33,15 +33,13 @@ const DOOR_STYLES: { id: string; label: string; description: string; widthM: num
   { id: "single",  label: "Single Door",  description: "Standard 900mm swing door",  widthM: 0.9, heightM: 2.1 },
   { id: "double",  label: "Double Door",  description: "French / double swing door",  widthM: 1.5, heightM: 2.1 },
   { id: "sliding", label: "Sliding Door", description: "Space-saving sliding panel",   widthM: 1.5, heightM: 2.1 },
-  { id: "bifold",  label: "Bi-fold Door", description: "Compact folding door panels",  widthM: 1.2, heightM: 2.1 },
 ];
 
 /* ── Window style catalog ── */
 const WINDOW_STYLES: { id: string; label: string; description: string; widthM: number; heightM: number; sillHeightM: number }[] = [
-  { id: "standard", label: "Standard Window", description: "Fixed or casement window",  widthM: 1.0, heightM: 1.2, sillHeightM: 0.9 },
-  { id: "wide",     label: "Wide Window",     description: "Large picture window",       widthM: 1.5, heightM: 1.2, sillHeightM: 0.9 },
-  { id: "bay",      label: "Bay Window",      description: "Projecting bay window",      widthM: 2.0, heightM: 1.2, sillHeightM: 0.9 },
-  { id: "narrow",   label: "Narrow Window",   description: "Slim / tall window",         widthM: 0.6, heightM: 1.4, sillHeightM: 0.9 },
+  { id: "single", label: "Single Window", description: "Single-panel wall window", widthM: 1.0, heightM: 1.2, sillHeightM: 0.9 },
+  { id: "double", label: "Double Window", description: "Two-panel wall window", widthM: 1.6, heightM: 1.2, sillHeightM: 0.9 },
+  { id: "triple", label: "Triple Window", description: "Three-panel wall window", widthM: 2.2, heightM: 1.2, sillHeightM: 0.9 },
 ];
 
 const ROOM_SHAPES: { id: RoomShape; label: string; icon: typeof Square }[] = [
@@ -361,8 +359,9 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
               placementTool={placementTool}
               onDoorAdd={(door) => setDoors((prev) => [...prev, door])}
               onWindowAdd={(windowItem) => setWindows((prev) => [...prev, windowItem])}
-              onDoorUpdate={(id, attrs) => setDoors((prev) => prev.map((item) => item.id === id ? { ...item, ...attrs } : item))}
+              onDoorUpdate={(id, attrs) => setDoors((prev) => prev.map((item) => item.id === id ? { ...item, ...attrs, bottomM: 0 } : item))}
               onWindowUpdate={(id, attrs) => setWindows((prev) => prev.map((item) => item.id === id ? { ...item, ...attrs } : item))}
+              isWizardMode={true}
               showGrid
             />
           </div>
@@ -373,6 +372,7 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
               furniture={[]}
               cameraPreset="front"
               cameraLocked
+              isWizardMode={true}
               showGrid
             />
           </div>
@@ -845,6 +845,7 @@ interface StepDoorsWindowsProps {
 }
 
 const StepDoorsWindows = ({
+  config,
   doors, windows, onDoorsChange, onWindowsChange,
   activeTab, onTabChange,
   selectedDoorStyleId, setSelectedDoorStyleId,
@@ -853,6 +854,8 @@ const StepDoorsWindows = ({
   const isAnythingSelected =
     (activeTab === "doors" && selectedDoorStyleId) ||
     (activeTab === "windows" && selectedWindowStyleId);
+
+  const wallSegments = useMemo(() => getWallSegments(config), [config]);
 
   return (
     <div className="space-y-5">
@@ -874,10 +877,9 @@ const StepDoorsWindows = ({
         ))}
       </div>
 
-      {/* Instruction */}
       <p className="text-[12px] leading-relaxed text-[hsl(30,10%,50%)]">
         {isAnythingSelected
-          ? "Click a wall in the 3D preview to place it, then drag the object directly on the wall to refine the position."
+          ? "Click a wall in the 3D preview to place it, then drag to reposition. Doors stay on floor level; windows can move to any height."
           : "Select a style below, then place and drag it on the 3D walls in the preview."}
       </p>
 
@@ -896,7 +898,6 @@ const StepDoorsWindows = ({
                       : "border-[hsl(30,15%,86%)] bg-white/60 hover:border-[hsl(28,30%,60%)] hover:bg-white"
                   }`}
                 >
-                  {/* Door icon */}
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${active ? "bg-[hsl(28,35%,32%)]" : "bg-[hsl(38,15%,90%)]"}`}>
                     <DoorOpen size={20} className={active ? "text-white" : "text-[hsl(28,20%,45%)]"} />
                   </div>
@@ -921,7 +922,6 @@ const StepDoorsWindows = ({
                       : "border-[hsl(30,15%,86%)] bg-white/60 hover:border-[hsl(28,30%,60%)] hover:bg-white"
                   }`}
                 >
-                  {/* Window icon */}
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${active ? "bg-[hsl(28,35%,32%)]" : "bg-[hsl(38,15%,90%)]"}`}>
                     <AppWindow size={20} className={active ? "text-white" : "text-[hsl(28,20%,45%)]"} />
                   </div>
@@ -936,40 +936,137 @@ const StepDoorsWindows = ({
             })}
       </div>
 
-      {/* Placed items list */}
       {(doors.length > 0 || windows.length > 0) && (
         <div className="rounded-xl border border-[hsl(30,15%,86%)] bg-white/60 p-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(28,20%,35%)]">Placed</p>
-          {doors.map((d) => (
-            <div key={d.id} className="flex items-center gap-2 rounded-lg bg-[hsl(28,30%,92%)] px-3 py-2">
-              <DoorOpen size={13} className="shrink-0 text-[hsl(28,35%,38%)]" />
-              <span className="flex-1 text-xs font-medium text-[hsl(28,20%,25%)]">
-                {DOOR_STYLES.find((s) => s.id === d.styleId)?.label ?? "Door"} — Wall {d.wallIndex + 1} · X {Math.round(d.positionAlongWall * 100)}% · Y {Math.round((d.bottomM ?? 0) * 100)}cm
-              </span>
-              <button
-                onClick={() => onDoorsChange((prev) => prev.filter((x) => x.id !== d.id))}
-                className="rounded p-0.5 hover:bg-[hsl(28,30%,80%)]"
-                aria-label="Remove door"
-              >
-                <X size={12} className="text-[hsl(28,20%,35%)]" />
-              </button>
-            </div>
-          ))}
-          {windows.map((w) => (
-            <div key={w.id} className="flex items-center gap-2 rounded-lg bg-[hsl(200,25%,92%)] px-3 py-2">
-              <AppWindow size={13} className="shrink-0 text-[hsl(200,50%,40%)]" />
-              <span className="flex-1 text-xs font-medium text-[hsl(28,20%,25%)]">
-                {WINDOW_STYLES.find((s) => s.id === w.styleId)?.label ?? "Window"} — Wall {w.wallIndex + 1} · X {Math.round(w.positionAlongWall * 100)}% · Y {Math.round(w.sillHeightM * 100)}cm
-              </span>
-              <button
-                onClick={() => onWindowsChange((prev) => prev.filter((x) => x.id !== w.id))}
-                className="rounded p-0.5 hover:bg-[hsl(200,25%,80%)]"
-                aria-label="Remove window"
-              >
-                <X size={12} className="text-[hsl(28,20%,35%)]" />
-              </button>
-            </div>
-          ))}
+
+          {doors.map((d) => {
+            const wallLen = wallSegments[d.wallIndex]?.lengthM ?? 3;
+            const maxWidth = Math.max(0.5, wallLen - 0.2);
+            const maxHeight = Math.max(1.8, config.wallHeight - 0.05);
+            return (
+              <div key={d.id} className="rounded-lg bg-[hsl(28,30%,92%)] px-3 py-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <DoorOpen size={13} className="shrink-0 text-[hsl(28,35%,38%)]" />
+                  <span className="flex-1 text-xs font-medium text-[hsl(28,20%,25%)]">
+                    {DOOR_STYLES.find((s) => s.id === d.styleId)?.label ?? "Door"} — Wall {d.wallIndex + 1} · X {Math.round(d.positionAlongWall * 100)}%
+                  </span>
+                  <button
+                    onClick={() => onDoorsChange((prev) => prev.filter((x) => x.id !== d.id))}
+                    className="rounded p-0.5 hover:bg-[hsl(28,30%,80%)]"
+                    aria-label="Remove door"
+                  >
+                    <X size={12} className="text-[hsl(28,20%,35%)]" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[10px] text-[hsl(30,10%,45%)]">Width (m)
+                    <input
+                      type="number"
+                      min={0.5}
+                      max={maxWidth}
+                      step={0.05}
+                      value={d.widthM.toFixed(2)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (isNaN(v)) return;
+                        onDoorsChange((prev) => prev.map((x) => x.id === d.id ? { ...x, widthM: Math.min(maxWidth, Math.max(0.5, v)), bottomM: 0 } : x));
+                      }}
+                      className="mt-1 h-7 w-full rounded border border-[hsl(30,15%,78%)] bg-white px-2 text-[11px]"
+                    />
+                  </label>
+                  <label className="text-[10px] text-[hsl(30,10%,45%)]">Height (m)
+                    <input
+                      type="number"
+                      min={1.8}
+                      max={maxHeight}
+                      step={0.05}
+                      value={(d.heightM ?? 2.1).toFixed(2)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (isNaN(v)) return;
+                        onDoorsChange((prev) => prev.map((x) => x.id === d.id ? { ...x, heightM: Math.min(maxHeight, Math.max(1.8, v)), bottomM: 0 } : x));
+                      }}
+                      className="mt-1 h-7 w-full rounded border border-[hsl(30,15%,78%)] bg-white px-2 text-[11px]"
+                    />
+                  </label>
+                </div>
+              </div>
+            );
+          })}
+
+          {windows.map((w) => {
+            const wallLen = wallSegments[w.wallIndex]?.lengthM ?? 3;
+            const maxWidth = Math.max(0.4, wallLen - 0.2);
+            const maxHeight = Math.max(0.5, config.wallHeight - 0.05);
+            const safeHeight = Math.min(maxHeight, Math.max(0.5, w.heightM ?? 1.2));
+            const maxSill = Math.max(0, config.wallHeight - safeHeight);
+            return (
+              <div key={w.id} className="rounded-lg bg-[hsl(200,25%,92%)] px-3 py-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <AppWindow size={13} className="shrink-0 text-[hsl(200,50%,40%)]" />
+                  <span className="flex-1 text-xs font-medium text-[hsl(28,20%,25%)]">
+                    {WINDOW_STYLES.find((s) => s.id === w.styleId)?.label ?? "Window"} — Wall {w.wallIndex + 1} · X {Math.round(w.positionAlongWall * 100)}% · Y {Math.round(w.sillHeightM * 100)}cm
+                  </span>
+                  <button
+                    onClick={() => onWindowsChange((prev) => prev.filter((x) => x.id !== w.id))}
+                    className="rounded p-0.5 hover:bg-[hsl(200,25%,80%)]"
+                    aria-label="Remove window"
+                  >
+                    <X size={12} className="text-[hsl(28,20%,35%)]" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="text-[10px] text-[hsl(30,10%,45%)]">Width (m)
+                    <input
+                      type="number"
+                      min={0.4}
+                      max={maxWidth}
+                      step={0.05}
+                      value={w.widthM.toFixed(2)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (isNaN(v)) return;
+                        onWindowsChange((prev) => prev.map((x) => x.id === w.id ? { ...x, widthM: Math.min(maxWidth, Math.max(0.4, v)) } : x));
+                      }}
+                      className="mt-1 h-7 w-full rounded border border-[hsl(30,15%,78%)] bg-white px-2 text-[11px]"
+                    />
+                  </label>
+                  <label className="text-[10px] text-[hsl(30,10%,45%)]">Height (m)
+                    <input
+                      type="number"
+                      min={0.5}
+                      max={maxHeight}
+                      step={0.05}
+                      value={safeHeight.toFixed(2)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (isNaN(v)) return;
+                        const nextH = Math.min(maxHeight, Math.max(0.5, v));
+                        onWindowsChange((prev) => prev.map((x) => x.id === w.id ? { ...x, heightM: nextH, sillHeightM: Math.min(x.sillHeightM, Math.max(0, config.wallHeight - nextH)) } : x));
+                      }}
+                      className="mt-1 h-7 w-full rounded border border-[hsl(30,15%,78%)] bg-white px-2 text-[11px]"
+                    />
+                  </label>
+                  <label className="text-[10px] text-[hsl(30,10%,45%)]">Sill (m)
+                    <input
+                      type="number"
+                      min={0}
+                      max={maxSill}
+                      step={0.05}
+                      value={w.sillHeightM.toFixed(2)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (isNaN(v)) return;
+                        onWindowsChange((prev) => prev.map((x) => x.id === w.id ? { ...x, sillHeightM: Math.min(maxSill, Math.max(0, v)) } : x));
+                      }}
+                      className="mt-1 h-7 w-full rounded border border-[hsl(30,15%,78%)] bg-white px-2 text-[11px]"
+                    />
+                  </label>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

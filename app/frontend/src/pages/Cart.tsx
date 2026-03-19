@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -90,6 +89,7 @@ const Cart = () => {
         </Link>
         <h1 className="font-display text-3xl font-semibold tracking-wide text-foreground lg:text-4xl">Your Cart</h1>
         <p className="mt-1 text-sm text-muted-foreground">{items.length} {items.length === 1 ? 'item' : 'items'} in your cart</p>
+        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       </div>
       <section className="container pt-4 pb-10 lg:pt-6 lg:pb-14">
         {loading ? (

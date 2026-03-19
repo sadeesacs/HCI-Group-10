@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Settings, Box, Armchair, Copy, Trash2, RotateCcw, Grid3X3, Magnet, Ruler, Save, DollarSign, MousePointer, Palette } from "lucide-react";
+import { Settings, Box, Armchair, Copy, Trash2, RotateCcw, Grid3X3, Ruler, Save, DollarSign, MousePointer, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
 import type { PlacedFurniture } from "@/types/designer";
 import type { RoomConfig } from "@/types/designer";
 import { getRoomBoundingBox } from "@/lib/room-geometry";
 
 const formatLKR = (n: number) => `LKR ${n.toLocaleString("en-LK")}`;
+const PX_PER_M = 120;
+const DEFAULT_FURNITURE_HEIGHT_M = 0.4;
+const CM_PER_M = 100;
 
 type SelectionState = "none" | "room" | "furniture";
 
@@ -160,6 +162,9 @@ const FurnitureProperties = ({
   onUpdate: (attrs: Partial<PlacedFurniture>) => void;
 }) => {
   const price = item.price ?? 0;
+  const lengthCm = (item.width / PX_PER_M) * CM_PER_M;
+  const widthCm = (item.height / PX_PER_M) * CM_PER_M;
+  const heightCm = (item.heightM ?? DEFAULT_FURNITURE_HEIGHT_M) * CM_PER_M;
   return (
     <>
       <PanelCard icon={<Armchair size={13} />} title="Selected">
@@ -182,10 +187,26 @@ const FurnitureProperties = ({
         <div className="grid grid-cols-2 gap-1">
           <NumericField label="X" value={Math.round(item.x)} onChange={(v) => onUpdate({ x: v })} />
           <NumericField label="Y" value={Math.round(item.y)} onChange={(v) => onUpdate({ y: v })} />
-          <NumericField label="W" value={Math.round(item.width)} onChange={(v) => onUpdate({ width: Math.max(20, v) })} />
-          <NumericField label="H" value={Math.round(item.height)} onChange={(v) => onUpdate({ height: Math.max(20, v) })} />
+          <NumericField
+            label="Len"
+            value={Math.round(lengthCm)}
+            onChange={(v) => onUpdate({ width: Math.max(20, Math.round((v / CM_PER_M) * PX_PER_M)) })}
+            suffix="cm"
+          />
+          <NumericField
+            label="Wid"
+            value={Math.round(widthCm)}
+            onChange={(v) => onUpdate({ height: Math.max(20, Math.round((v / CM_PER_M) * PX_PER_M)) })}
+            suffix="cm"
+          />
         </div>
-        <div className="mt-1">
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          <NumericField
+            label="Hei"
+            value={Math.round(heightCm)}
+            onChange={(v) => onUpdate({ heightM: Math.max(0.1, Math.min(4, v / CM_PER_M)) })}
+            suffix="cm"
+          />
           <NumericField label="Rot" value={Math.round(item.rotation)} onChange={(v) => onUpdate({ rotation: v })} suffix="°" />
         </div>
       </PanelCard>

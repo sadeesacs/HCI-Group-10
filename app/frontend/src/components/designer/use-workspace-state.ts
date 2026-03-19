@@ -137,7 +137,14 @@ export function useWorkspaceState() {
     if (!selectedId) return;
     const initial = initialItemsRef.current.find((f) => f.id === selectedId);
     if (initial) {
-      handleFurnitureUpdate(selectedId, { x: initial.x, y: initial.y, rotation: initial.rotation, width: initial.width, height: initial.height });
+      handleFurnitureUpdate(selectedId, {
+        x: initial.x,
+        y: initial.y,
+        rotation: initial.rotation,
+        width: initial.width,
+        height: initial.height,
+        heightM: initial.heightM,
+      });
       toast("Position reset");
     }
   }, [selectedId, handleFurnitureUpdate]);

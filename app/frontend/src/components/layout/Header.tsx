@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingBag, Menu, X, UserRound, LogOut, BadgeCheck } from "lucide-react";
+import { ShoppingBag, Menu, X, UserRound, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/use-cart";

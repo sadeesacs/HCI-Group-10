@@ -13,8 +13,10 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
   const [hovered, setHovered] = useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
 
   const currentImage = hovered && product.images.length > 1 ? product.images[1] : product.images[0];
+  const toggle = () => setWishlisted((prev) => !prev);
 
   return (
     <div
@@ -58,7 +60,7 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
             <Eye size={14} className="mr-1.5" /> Quick view
           </Button>
           <button
-            onClick={() => toggle(product.id)}
+            onClick={toggle}
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
               wishlisted

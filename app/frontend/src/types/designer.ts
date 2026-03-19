@@ -5,6 +5,8 @@ export interface PlacedFurniture {
   y: number;
   width: number;
   height: number;
+  /** Vertical height in meters used for 3D scaling */
+  heightM?: number;
   rotation: number;
   color: string;
   label: string;
@@ -115,7 +117,7 @@ export interface DoorPlacement {
   widthM: number;
   heightM: number;
   bottomM?: number;
-  styleId?: string; // e.g. "single" | "double" | "sliding" | "bifold"
+  styleId?: string; // e.g. "single" | "double" | "sliding"
 }
 
 export interface WindowPlacement {
@@ -125,7 +127,7 @@ export interface WindowPlacement {
   widthM: number;
   heightM: number;
   sillHeightM: number;
-  styleId?: string; // e.g. "standard" | "wide" | "bay" | "narrow"
+  styleId?: string; // e.g. "single" | "double" | "triple"
 }
 
 /* ── Room config ── */

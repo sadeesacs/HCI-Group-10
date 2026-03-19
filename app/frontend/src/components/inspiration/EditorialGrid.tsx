@@ -1,8 +1,5 @@
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 const livingImg = "/assets/rooms/living.jpg";
 const diningImg = "/assets/rooms/dining.jpg";

@@ -13,6 +13,7 @@ export interface PlacedFurniture {
   y: number;
   width: number;
   height: number;
+  heightM?: number;
   rotation: number;
   color: string;
   label: string;
@@ -144,6 +145,7 @@ const RoomCanvas2D = ({ roomConfig, furniture, selectedId, onSelect, onFurniture
       y,
       width: w,
       height: h,
+      heightM: template.heightM,
       rotation: 0,
     });
   }, [onDropFurniture, PX_PER_M, offsetX, offsetY]);

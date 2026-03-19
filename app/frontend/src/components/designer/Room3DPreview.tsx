@@ -10,13 +10,27 @@ import { getRoomPolygon, getRoomBoundingBox } from "@/lib/room-geometry";
 
 /* ─── Constants ─── */
 const PX_PER_M = 120;
-const WALL_THICKNESS = 0.06;
+const WALL_THICKNESS = 0.2;
 const FURNITURE_HEIGHT = 0.4;
 const SNAP_M = 0.125; // ~15px at 120 px/m
 const snapM = (v: number) => Math.round(v / SNAP_M) * SNAP_M;
-const OPENING_DEPTH = WALL_THICKNESS * 1.15;
+const OPENING_DEPTH = WALL_THICKNESS * 0.9;
 const OPENING_MARGIN_M = 0.08;
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const getFurnitureHeightM = (item: PlacedFurniture) => clamp(item.heightM ?? FURNITURE_HEIGHT, 0.1, 4);
+
+const OPENING_GLB_PATHS = {
+  doors: {
+    single: "/models/doors&windows/wood single door.glb",
+    double: "/models/doors&windows/wood double door.glb",
+    sliding: "/models/doors&windows/sliding door.glb",
+  },
+  windows: {
+    single: "/models/doors&windows/single window.glb",
+    double: "/models/doors&windows/double window.glb",
+    triple: "/models/doors&windows/thrible window.glb",
+  },
+} as const;
 
 /* ─── Types ─── */
 export type CameraPresetName = "front" | "back" | "left" | "right" | "top" | "default";
@@ -61,6 +75,8 @@ interface Props {
   interactive?: boolean;
   /** Top-down mode — hides walls/ceiling, locks camera from above */
   topDown?: boolean;
+  /** Wizard mode — keeps all walls visible, disables visibility culling */
+  isWizardMode?: boolean;
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
   onFurnitureUpdate?: (id: string, attrs: Partial<PlacedFurniture>) => void;
@@ -85,6 +101,77 @@ class ModelErrorBoundary extends Component<ModelErrorBoundaryProps, ModelErrorBo
   render() {
     return this.state.hasError ? this.props.fallback : this.props.children;
   }
+}
+
+interface WallOpeningRect {
+  startX: number; // local wall X (meters), centered wall coordinates
+  endX: number;   // local wall X (meters), centered wall coordinates
+  bottomY: number; // local wall Y (meters), centered wall coordinates
+  topY: number;    // local wall Y (meters), centered wall coordinates
+}
+
+interface WallPiece {
+  centerX: number;
+  centerY: number;
+  width: number;
+  height: number;
+}
+
+const WALL_PIECE_EPSILON = 0.005;
+
+function createCutWallPieces(wallLength: number, wallHeight: number, openings: WallOpeningRect[]): WallPiece[] {
+  if (!openings.length) {
+    return [{ centerX: 0, centerY: 0, width: wallLength, height: wallHeight }];
+  }
+
+  const uniqueSorted = (vals: number[]) =>
+    Array.from(new Set(vals.map((v) => Number(v.toFixed(6))))).sort((a, b) => a - b);
+
+  const xCuts = uniqueSorted([
+    -wallLength / 2,
+    wallLength / 2,
+    ...openings.flatMap((o) => [o.startX, o.endX]),
+  ]);
+
+  const pieces: WallPiece[] = [];
+
+  for (let xi = 0; xi < xCuts.length - 1; xi += 1) {
+    const x0 = xCuts[xi];
+    const x1 = xCuts[xi + 1];
+    const xWidth = x1 - x0;
+    if (xWidth < WALL_PIECE_EPSILON) continue;
+
+    const xMid = (x0 + x1) / 2;
+    const relevantOpenings = openings.filter((o) => xMid > o.startX + WALL_PIECE_EPSILON && xMid < o.endX - WALL_PIECE_EPSILON);
+
+    const yCuts = uniqueSorted([
+      -wallHeight / 2,
+      wallHeight / 2,
+      ...relevantOpenings.flatMap((o) => [o.bottomY, o.topY]),
+    ]);
+
+    for (let yi = 0; yi < yCuts.length - 1; yi += 1) {
+      const y0 = yCuts[yi];
+      const y1 = yCuts[yi + 1];
+      const yHeight = y1 - y0;
+      if (yHeight < WALL_PIECE_EPSILON) continue;
+
+      const yMid = (y0 + y1) / 2;
+      const insideOpening = relevantOpenings.some(
+        (o) => yMid > o.bottomY + WALL_PIECE_EPSILON && yMid < o.topY - WALL_PIECE_EPSILON,
+      );
+      if (insideOpening) continue;
+
+      pieces.push({
+        centerX: xMid,
+        centerY: yMid,
+        width: xWidth,
+        height: yHeight,
+      });
+    }
+  }
+
+  return pieces;
 }
 
 /* ─── Room geometry hook ─── */
@@ -115,17 +202,23 @@ function useRoomGeometry(config: RoomConfig) {
       const normalZ = length > 0 ? dx / length : 0;
       const tangentX = length > 0 ? dx / length : 0;
       const tangentZ = length > 0 ? dz / length : 0;
+      const offsetX = normalX * (WALL_THICKNESS / 2);
+      const offsetZ = normalZ * (WALL_THICKNESS / 2);
+      const startX = v[0] + offsetX;
+      const startZ = v[2] + offsetZ;
+      const endX = next[0] + offsetX;
+      const endZ = next[2] + offsetZ;
       return {
         length,
-        centerX: (v[0] + next[0]) / 2,
-        centerZ: (v[2] + next[2]) / 2,
+        centerX: (startX + endX) / 2,
+        centerZ: (startZ + endZ) / 2,
         angle: Math.atan2(-dz, dx),
         normalX,
         normalZ,
-        startX: v[0],
-        startZ: v[2],
-        endX: next[0],
-        endZ: next[2],
+        startX,
+        startZ,
+        endX,
+        endZ,
         tangentX,
         tangentZ,
       };
@@ -225,7 +318,7 @@ function RoomCeiling({ shapePoints, color, height }: { shapePoints: [number, num
 
 /* ─── R3F: Walls ─── */
 function RoomWalls({
-  walls, wallH, color, hideIdx, disableAutoHide, onWallPointerDown,
+  walls, wallH, color, hideIdx, disableAutoHide, onWallPointerDown, openingsByWall, onHiddenWallsChange,
 }: {
   walls: WallGeometry[];
   wallH: number;
@@ -233,43 +326,59 @@ function RoomWalls({
   hideIdx?: number;
   disableAutoHide?: boolean;
   onWallPointerDown?: (wallIndex: number, event: ThreeEvent<PointerEvent>) => void;
+  openingsByWall?: WallOpeningRect[][];
+  onHiddenWallsChange?: (hiddenWallIds: number[]) => void;
 }) {
-  const meshRefs = useRef<Map<number, THREE.Mesh>>(new Map());
+  const meshRefs = useRef<Map<number, THREE.Object3D>>(new Map());
   const { camera } = useThree();
+  const lastHiddenKeyRef = useRef("");
 
   useFrame(() => {
-    if (disableAutoHide) {
-      meshRefs.current.forEach((mesh) => { mesh.visible = true; });
-      return;
+    const hiddenSet = new Set<number>();
+
+    if (!disableAutoHide) {
+      const camPos = camera.position;
+      const scores: { idx: number; dot: number }[] = [];
+      for (let i = 0; i < walls.length; i++) {
+        const w = walls[i];
+        if (w.length < 0.01) continue;
+        scores.push({ idx: i, dot: (camPos.x - w.centerX) * w.normalX + (camPos.z - w.centerZ) * w.normalZ });
+      }
+      scores.sort((a, b) => b.dot - a.dot);
+      if (scores.length > 0 && scores[0].dot > 0) hiddenSet.add(scores[0].idx);
+      if (scores.length > 1 && scores[1].dot > 0) hiddenSet.add(scores[1].idx);
     }
 
-    const camPos = camera.position;
-    const scores: { idx: number; dot: number }[] = [];
-    for (let i = 0; i < walls.length; i++) {
-      const w = walls[i];
-      if (w.length < 0.01) continue;
-      scores.push({ idx: i, dot: (camPos.x - w.centerX) * w.normalX + (camPos.z - w.centerZ) * w.normalZ });
-    }
-    scores.sort((a, b) => b.dot - a.dot);
-    const hiddenSet = new Set<number>();
-    if (scores.length > 0 && scores[0].dot > 0) hiddenSet.add(scores[0].idx);
-    if (scores.length > 1 && scores[1].dot > 0) hiddenSet.add(scores[1].idx);
     if (hideIdx !== undefined) hiddenSet.add(hideIdx);
     meshRefs.current.forEach((mesh, i) => { mesh.visible = !hiddenSet.has(i); });
+
+    if (onHiddenWallsChange) {
+      const sorted = Array.from(hiddenSet).sort((a, b) => a - b);
+      const key = sorted.join(",");
+      if (key !== lastHiddenKeyRef.current) {
+        lastHiddenKeyRef.current = key;
+        onHiddenWallsChange(sorted);
+      }
+    }
   });
 
   return (
     <group>
       {walls.map((wall, i) => {
         if (wall.length < 0.01) return null;
+        const wallPieces = createCutWallPieces(wall.length, wallH, openingsByWall?.[i] ?? []);
         return (
-          <mesh key={i} ref={(el) => { if (el) meshRefs.current.set(i, el); else meshRefs.current.delete(i); }}
+          <group key={i} ref={(el) => { if (el) meshRefs.current.set(i, el); else meshRefs.current.delete(i); }}
             position={[wall.centerX, wallH / 2, wall.centerZ]}
             rotation={[0, wall.angle, 0]}
             onPointerDown={onWallPointerDown ? (event) => onWallPointerDown(i, event) : undefined}>
-            <boxGeometry args={[wall.length, wallH, WALL_THICKNESS]} />
-            <meshStandardMaterial color={color} side={THREE.DoubleSide} />
-          </mesh>
+            {wallPieces.map((piece, idx) => (
+              <mesh key={idx} position={[piece.centerX, piece.centerY, 0]}>
+                <boxGeometry args={[piece.width, piece.height, WALL_THICKNESS]} />
+                <meshStandardMaterial color={color} side={THREE.DoubleSide} />
+              </mesh>
+            ))}
+          </group>
         );
       })}
     </group>
@@ -337,6 +446,7 @@ function GLBFurnitureItem({ item, bbox }: { item: PlacedFurniture; bbox: { width
   }, [scene, item.cushionColor]);
   const wM = item.width / PX_PER_M;
   const dM = item.height / PX_PER_M;
+  const hM = getFurnitureHeightM(item);
   const xM = item.x / PX_PER_M + wM / 2 - bbox.width / 2;
   const zM = bbox.height / 2 - (item.y / PX_PER_M + dM / 2);
 
@@ -344,10 +454,14 @@ function GLBFurnitureItem({ item, bbox }: { item: PlacedFurniture; bbox: { width
     const box = new THREE.Box3().setFromObject(clonedScene);
     const size = new THREE.Vector3();
     box.getSize(size);
-    if (size.x < 0.001 || size.z < 0.001) return { scale: [1, 1, 1] as [number, number, number], yOffset: 0 };
-    const s = Math.min(wM / size.x, dM / size.z);
-    return { scale: [s, s, s] as [number, number, number], yOffset: -box.min.y * s };
-  }, [clonedScene, wM, dM]);
+    if (size.x < 0.001 || size.y < 0.001 || size.z < 0.001) {
+      return { scale: [1, 1, 1] as [number, number, number], yOffset: 0 };
+    }
+    const sx = wM / size.x;
+    const sy = hM / size.y;
+    const sz = dM / size.z;
+    return { scale: [sx, sy, sz] as [number, number, number], yOffset: -box.min.y * sy };
+  }, [clonedScene, wM, hM, dM]);
 
   return <primitive object={clonedScene} position={[xM, yOffset, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]} scale={scale} />;
 }
@@ -355,11 +469,12 @@ function GLBFurnitureItem({ item, bbox }: { item: PlacedFurniture; bbox: { width
 function FurnitureFallbackMesh({ item, bbox }: { item: PlacedFurniture; bbox: { width: number; height: number } }) {
   const wM = item.width / PX_PER_M;
   const dM = item.height / PX_PER_M;
+  const hM = getFurnitureHeightM(item);
   const xM = item.x / PX_PER_M + wM / 2 - bbox.width / 2;
   const zM = bbox.height / 2 - (item.y / PX_PER_M + dM / 2);
   return (
-    <mesh position={[xM, FURNITURE_HEIGHT / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
-      <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
+    <mesh position={[xM, hM / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
+      <boxGeometry args={[wM, hM, dM]} />
       <meshStandardMaterial color={item.color} opacity={0.75} transparent />
     </mesh>
   );
@@ -446,8 +561,8 @@ function InteractiveFurnitureItem({
           </Suspense>
         </ModelErrorBoundary>
       ) : (
-        <mesh position={[xM, FURNITURE_HEIGHT / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
-          <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
+        <mesh position={[xM, getFurnitureHeightM(item) / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
+          <boxGeometry args={[wM, getFurnitureHeightM(item), dM]} />
           <meshStandardMaterial color={item.color} />
         </mesh>
       )}
@@ -483,8 +598,8 @@ function FurnitureItems({ furniture, bbox }: { furniture: PlacedFurniture[]; bbo
         const xM = item.x / PX_PER_M + wM / 2 - bbox.width / 2;
         const zM = bbox.height / 2 - (item.y / PX_PER_M + dM / 2);
         return (
-          <mesh key={item.id} position={[xM, FURNITURE_HEIGHT / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
-            <boxGeometry args={[wM, FURNITURE_HEIGHT, dM]} />
+          <mesh key={item.id} position={[xM, getFurnitureHeightM(item) / 2, zM]} rotation={[0, -item.rotation * (Math.PI / 180), 0]}>
+            <boxGeometry args={[wM, getFurnitureHeightM(item), dM]} />
             <meshStandardMaterial color={item.color} />
           </mesh>
         );
@@ -542,80 +657,102 @@ function getOpeningTransform(
   };
 }
 
+function OpeningGLBModel({
+  glbPath,
+  widthM,
+  heightM,
+  depthM,
+  selected,
+  selectionColor,
+}: {
+  glbPath: string;
+  widthM: number;
+  heightM: number;
+  depthM: number;
+  selected?: boolean;
+  selectionColor: string;
+}) {
+  const { scene } = useGLTF(glbPath);
+  const clonedScene = useMemo(() => deepCloneWithMaterials(scene), [scene]);
+
+  const { scale, offset } = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(clonedScene);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    if (size.x < 0.001 || size.y < 0.001 || size.z < 0.001) {
+      return {
+        scale: [1, 1, 1] as [number, number, number],
+        offset: [0, -heightM / 2, 0] as [number, number, number],
+      };
+    }
+
+    const sx = widthM / size.x;
+    const sy = heightM / size.y;
+    const sz = depthM / size.z;
+
+    return {
+      scale: [sx, sy, sz] as [number, number, number],
+      offset: [-center.x * sx, -center.y * sy, -center.z * sz] as [number, number, number],
+    };
+  }, [clonedScene, depthM, heightM, widthM]);
+
+  return (
+    <group>
+      <primitive object={clonedScene} scale={scale} position={offset} />
+      {selected && (
+        <mesh position={[0, 0, 0]} renderOrder={10}>
+          <boxGeometry args={[widthM + 0.08, heightM + 0.08, depthM + 0.05]} />
+          <meshBasicMaterial color={selectionColor} wireframe transparent opacity={0.9} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
 function DoorMesh({ door, wall, selected }: { door: DoorPlacement; wall: WallGeometry; selected?: boolean }) {
   const widthM = door.widthM;
   const heightM = door.heightM ?? 2.1;
-  const bottomM = clamp(door.bottomM ?? 0, 0, Number.MAX_SAFE_INTEGER);
+  const bottomM = 0;
   const position = getOpeningTransform(wall, door.positionAlongWall, bottomM, heightM);
-  const frameColor = door.styleId === "sliding" ? "#bca58a" : "#8b6849";
-  const panelColor = door.styleId === "bifold" ? "#d4c2ac" : "#ede2d2";
-  const sideWidth = 0.05;
-  const topHeight = 0.06;
+  const styleKey = (door.styleId ?? "single") as keyof typeof OPENING_GLB_PATHS.doors;
+  const glbPath = OPENING_GLB_PATHS.doors[styleKey] ?? OPENING_GLB_PATHS.doors.single;
 
   return (
     <group position={[position.x, position.y, position.z]} rotation={[0, wall.angle, 0]}>
-      <mesh position={[0, 0, 0]} renderOrder={1}>
-        <boxGeometry args={[widthM - 0.02, heightM - 0.02, OPENING_DEPTH * 0.72]} />
-        <meshStandardMaterial color="#2d2218" roughness={0.95} metalness={0.02} />
-      </mesh>
-
-      <mesh position={[widthM / 2 - sideWidth / 2, 0, 0]} renderOrder={2}>
-        <boxGeometry args={[sideWidth, heightM, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
-      </mesh>
-      <mesh position={[-widthM / 2 + sideWidth / 2, 0, 0]} renderOrder={2}>
-        <boxGeometry args={[sideWidth, heightM, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
-      </mesh>
-      <mesh position={[0, heightM / 2 - topHeight / 2, 0]} renderOrder={2}>
-        <boxGeometry args={[widthM, topHeight, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.7} />
-      </mesh>
-
-      {door.styleId === "double" ? (
-        <>
-          <mesh position={[-widthM * 0.24, 0, -OPENING_DEPTH * 0.18]} renderOrder={3}>
-            <boxGeometry args={[widthM * 0.44, heightM - 0.12, OPENING_DEPTH * 0.2]} />
-            <meshStandardMaterial color={panelColor} roughness={0.85} />
+      <ModelErrorBoundary
+        fallback={
+          <mesh>
+            <boxGeometry args={[widthM, heightM, OPENING_DEPTH]} />
+            <meshStandardMaterial color="#8b6849" />
           </mesh>
-          <mesh position={[widthM * 0.24, 0, -OPENING_DEPTH * 0.18]} renderOrder={3}>
-            <boxGeometry args={[widthM * 0.44, heightM - 0.12, OPENING_DEPTH * 0.2]} />
-            <meshStandardMaterial color={panelColor} roughness={0.85} />
-          </mesh>
-        </>
-      ) : door.styleId === "sliding" ? (
-        <>
-          <mesh position={[-widthM * 0.12, 0, -OPENING_DEPTH * 0.16]} renderOrder={3}>
-            <boxGeometry args={[widthM * 0.62, heightM - 0.12, OPENING_DEPTH * 0.12]} />
-            <meshStandardMaterial color="#d7e5ef" roughness={0.2} metalness={0.05} transparent opacity={0.65} />
-          </mesh>
-          <mesh position={[widthM * 0.12, 0, OPENING_DEPTH * 0.02]} renderOrder={3}>
-            <boxGeometry args={[widthM * 0.62, heightM - 0.12, OPENING_DEPTH * 0.12]} />
-            <meshStandardMaterial color="#c6d7e4" roughness={0.2} metalness={0.05} transparent opacity={0.5} />
-          </mesh>
-        </>
-      ) : door.styleId === "bifold" ? (
-        <>
-          <mesh position={[-widthM * 0.18, 0, -OPENING_DEPTH * 0.16]} renderOrder={3}>
-            <boxGeometry args={[widthM * 0.26, heightM - 0.12, OPENING_DEPTH * 0.18]} />
-            <meshStandardMaterial color={panelColor} roughness={0.85} />
-          </mesh>
-          <mesh position={[widthM * 0.08, 0, -OPENING_DEPTH * 0.1]} renderOrder={3}>
-            <boxGeometry args={[widthM * 0.26, heightM - 0.12, OPENING_DEPTH * 0.18]} />
-            <meshStandardMaterial color={panelColor} roughness={0.85} />
-          </mesh>
-        </>
-      ) : (
-        <mesh position={[0, 0, -OPENING_DEPTH * 0.16]} renderOrder={3}>
-          <boxGeometry args={[widthM - 0.14, heightM - 0.12, OPENING_DEPTH * 0.2]} />
-          <meshStandardMaterial color={panelColor} roughness={0.85} />
-        </mesh>
-      )}
+        }
+      >
+        <Suspense
+          fallback={
+            <mesh>
+              <boxGeometry args={[widthM, heightM, OPENING_DEPTH]} />
+              <meshStandardMaterial color="#8b6849" />
+            </mesh>
+          }
+        >
+          <OpeningGLBModel
+            glbPath={glbPath}
+            widthM={widthM}
+            heightM={heightM}
+            depthM={OPENING_DEPTH}
+            selected={selected}
+            selectionColor="#6B4226"
+          />
+        </Suspense>
+      </ModelErrorBoundary>
 
       {selected && (
-        <mesh position={[0, 0, 0]} renderOrder={10}>
-          <boxGeometry args={[widthM + 0.08, heightM + 0.08, OPENING_DEPTH + 0.04]} />
-          <meshBasicMaterial color="#6B4226" wireframe transparent opacity={0.9} />
+        <mesh position={[0, 0, 0]} renderOrder={11}>
+          <boxGeometry args={[widthM + 0.02, heightM + 0.02, OPENING_DEPTH + 0.01]} />
+          <meshBasicMaterial color="#6B4226" wireframe transparent opacity={0.35} />
         </mesh>
       )}
     </group>
@@ -627,48 +764,42 @@ function WindowMesh({ windowItem, wall, selected }: { windowItem: WindowPlacemen
   const heightM = windowItem.heightM ?? 1.2;
   const bottomM = clamp(windowItem.sillHeightM, 0, Number.MAX_SAFE_INTEGER);
   const position = getOpeningTransform(wall, windowItem.positionAlongWall, bottomM, heightM);
-  const frameColor = windowItem.styleId === "bay" ? "#b7c2cb" : "#e8edf1";
+  const styleKey = (windowItem.styleId ?? "single") as keyof typeof OPENING_GLB_PATHS.windows;
+  const glbPath = OPENING_GLB_PATHS.windows[styleKey] ?? OPENING_GLB_PATHS.windows.single;
 
   return (
     <group position={[position.x, position.y, position.z]} rotation={[0, wall.angle, 0]}>
-      <mesh renderOrder={1}>
-        <boxGeometry args={[widthM - 0.02, heightM - 0.02, OPENING_DEPTH * 0.78]} />
-        <meshStandardMaterial color="#1f2830" roughness={0.9} metalness={0.05} />
-      </mesh>
-
-      <mesh position={[widthM / 2 - 0.025, 0, 0]} renderOrder={2}>
-        <boxGeometry args={[0.05, heightM, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
-      </mesh>
-      <mesh position={[-widthM / 2 + 0.025, 0, 0]} renderOrder={2}>
-        <boxGeometry args={[0.05, heightM, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
-      </mesh>
-      <mesh position={[0, heightM / 2 - 0.025, 0]} renderOrder={2}>
-        <boxGeometry args={[widthM, 0.05, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
-      </mesh>
-      <mesh position={[0, -heightM / 2 + 0.025, 0]} renderOrder={2}>
-        <boxGeometry args={[widthM, 0.05, OPENING_DEPTH]} />
-        <meshStandardMaterial color={frameColor} roughness={0.45} metalness={0.05} />
-      </mesh>
-      <mesh position={[0, 0, 0]} renderOrder={3}>
-        <boxGeometry args={[widthM - 0.1, heightM - 0.1, OPENING_DEPTH * 0.22]} />
-        <meshPhysicalMaterial color="#bfe0f5" roughness={0.08} transmission={0.7} transparent opacity={0.55} />
-      </mesh>
-      <mesh position={[0, 0, 0]} renderOrder={4}>
-        <boxGeometry args={[0.04, heightM - 0.08, OPENING_DEPTH * 0.24]} />
-        <meshStandardMaterial color="#f7fafc" roughness={0.35} metalness={0.02} />
-      </mesh>
-      <mesh position={[0, -heightM / 2 - 0.025, OPENING_DEPTH * 0.18]} renderOrder={4}>
-        <boxGeometry args={[widthM + 0.1, 0.05, OPENING_DEPTH * 0.5]} />
-        <meshStandardMaterial color="#f7fafc" roughness={0.35} metalness={0.02} />
-      </mesh>
+      <ModelErrorBoundary
+        fallback={
+          <mesh>
+            <boxGeometry args={[widthM, heightM, OPENING_DEPTH * 0.7]} />
+            <meshStandardMaterial color="#cfdbe6" />
+          </mesh>
+        }
+      >
+        <Suspense
+          fallback={
+            <mesh>
+              <boxGeometry args={[widthM, heightM, OPENING_DEPTH * 0.7]} />
+              <meshStandardMaterial color="#cfdbe6" />
+            </mesh>
+          }
+        >
+          <OpeningGLBModel
+            glbPath={glbPath}
+            widthM={widthM}
+            heightM={heightM}
+            depthM={OPENING_DEPTH}
+            selected={selected}
+            selectionColor="#2f7bb8"
+          />
+        </Suspense>
+      </ModelErrorBoundary>
 
       {selected && (
-        <mesh position={[0, 0, 0]} renderOrder={10}>
-          <boxGeometry args={[widthM + 0.08, heightM + 0.08, OPENING_DEPTH + 0.04]} />
-          <meshBasicMaterial color="#2f7bb8" wireframe transparent opacity={0.9} />
+        <mesh position={[0, 0, 0]} renderOrder={11}>
+          <boxGeometry args={[widthM + 0.02, heightM + 0.02, OPENING_DEPTH + 0.01]} />
+          <meshBasicMaterial color="#2f7bb8" wireframe transparent opacity={0.35} />
         </mesh>
       )}
     </group>
@@ -676,11 +807,10 @@ function WindowMesh({ windowItem, wall, selected }: { windowItem: WindowPlacemen
 }
 
 function InteractiveDoorItem({
-  door, wall, wallH, selected, onSelect, onUpdate, controlsRef,
+  door, wall, selected, onSelect, onUpdate, controlsRef,
 }: {
   door: DoorPlacement;
   wall: WallGeometry;
-  wallH: number;
   selected: boolean;
   onSelect: (id: string) => void;
   onUpdate: (id: string, attrs: Partial<DoorPlacement>) => void;
@@ -692,13 +822,9 @@ function InteractiveDoorItem({
     [wall],
   );
   const dragAlongOffset = useRef(0);
-  const dragCenterYOffset = useRef(0);
 
   const widthM = door.widthM;
-  const heightM = door.heightM ?? 2.1;
-  const bottomM = clamp(door.bottomM ?? 0, 0, Math.max(0, wallH - heightM));
   const currentCenterAlong = clamp(door.positionAlongWall, 0, 1) * wall.length;
-  const currentCenterY = bottomM + heightM / 2;
 
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
@@ -710,9 +836,8 @@ function InteractiveDoorItem({
     e.ray.intersectPlane(dragPlane, point);
     const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
     dragAlongOffset.current = currentCenterAlong - projectedAlong;
-    dragCenterYOffset.current = currentCenterY - point.y;
     (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
-  }, [controlsRef, currentCenterAlong, currentCenterY, door.id, dragPlane, onSelect, wall]);
+  }, [controlsRef, currentCenterAlong, door.id, dragPlane, onSelect, wall]);
 
   const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (!isDragging.current) return;
@@ -722,12 +847,11 @@ function InteractiveDoorItem({
     const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
     const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, widthM);
     const centerAlong = clamp(projectedAlong + dragAlongOffset.current, minCenter, maxCenter);
-    const centerY = point.y + dragCenterYOffset.current;
     onUpdate(door.id, {
       positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
-      bottomM: clamp(centerY - heightM / 2, 0, Math.max(0, wallH - heightM)),
+      bottomM: 0,
     });
-  }, [door.id, dragPlane, heightM, onUpdate, wall, wallH, widthM]);
+  }, [door.id, dragPlane, onUpdate, wall, widthM]);
 
   const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (!isDragging.current) return;
@@ -812,20 +936,24 @@ function InteractiveWindowItem({
 }
 
 function RoomOpenings({
-  doors, windows, walls,
+  doors, windows, walls, hiddenWallIds,
 }: {
   doors: DoorPlacement[];
   windows: WindowPlacement[];
   walls: WallGeometry[];
+  hiddenWallIds: number[];
 }) {
+  const hiddenSet = useMemo(() => new Set(hiddenWallIds), [hiddenWallIds]);
   return (
     <group>
       {doors.map((door) => {
+        if (hiddenSet.has(door.wallIndex)) return null;
         const wall = walls[door.wallIndex];
         if (!wall) return null;
         return <DoorMesh key={door.id} door={door} wall={wall} />;
       })}
       {windows.map((windowItem) => {
+        if (hiddenSet.has(windowItem.wallIndex)) return null;
         const wall = walls[windowItem.wallIndex];
         if (!wall) return null;
         return <WindowMesh key={windowItem.id} windowItem={windowItem} wall={wall} />;
@@ -844,6 +972,7 @@ function InteractiveOpenings({
   onDoorUpdate,
   onWindowUpdate,
   controlsRef,
+  hiddenWallIds,
 }: {
   doors: DoorPlacement[];
   windows: WindowPlacement[];
@@ -854,10 +983,14 @@ function InteractiveOpenings({
   onDoorUpdate?: (id: string, attrs: Partial<DoorPlacement>) => void;
   onWindowUpdate?: (id: string, attrs: Partial<WindowPlacement>) => void;
   controlsRef: React.MutableRefObject<any>;
+  hiddenWallIds: number[];
 }) {
+  const hiddenSet = useMemo(() => new Set(hiddenWallIds), [hiddenWallIds]);
+
   return (
     <group>
       {doors.map((door) => {
+        if (hiddenSet.has(door.wallIndex)) return null;
         const wall = walls[door.wallIndex];
         if (!wall) return null;
         return onDoorUpdate ? (
@@ -865,7 +998,6 @@ function InteractiveOpenings({
             key={door.id}
             door={door}
             wall={wall}
-            wallH={wallH}
             selected={selectedOpening?.kind === "door" && selectedOpening.id === door.id}
             onSelect={(id) => onSelectOpening({ kind: "door", id })}
             onUpdate={onDoorUpdate}
@@ -876,6 +1008,7 @@ function InteractiveOpenings({
         );
       })}
       {windows.map((windowItem) => {
+        if (hiddenSet.has(windowItem.wallIndex)) return null;
         const wall = walls[windowItem.wallIndex];
         if (!wall) return null;
         return onWindowUpdate ? (
@@ -988,6 +1121,7 @@ const Room3DPreview = ({
   showGrid,
   interactive,
   topDown,
+  isWizardMode,
   selectedId,
   onSelect,
   onFurnitureUpdate,
@@ -1002,6 +1136,7 @@ const Room3DPreview = ({
   const presets = useMemo(() => getCameraPresets(bbox, wallH), [bbox, wallH]);
   const controlsRef = useRef<any>(null);
   const [selectedOpening, setSelectedOpening] = useState<{ kind: "door" | "window"; id: string } | null>(null);
+  const [hiddenWallIds, setHiddenWallIds] = useState<number[]>([]);
 
   // For non-interactive: manage preset internally
   const effectiveInitialPreset = topDown ? "top" : (initialPreset ?? "default");
@@ -1016,11 +1151,49 @@ const Room3DPreview = ({
   }, [initialPreset, topDown]);
 
   const preset = presets[activePreset];
-  const hasFurniture = furniture.length > 0;
   const isLocked = topDown || cameraLocked;
   const hideStructure = topDown; // In top-down mode, hide walls and ceiling
   const interactiveOpenings = !topDown && (!!placementTool || !!onDoorUpdate || !!onWindowUpdate);
+  // In wizard mode, keep all walls visible (no visibility culling)
+  const effectiveHiddenWallIds = isWizardMode ? [] : hiddenWallIds;
   const interactiveScene = interactive || interactiveOpenings;
+  const openingsByWall = useMemo<WallOpeningRect[][]>(() => {
+    const byWall = walls.map(() => [] as WallOpeningRect[]);
+
+    roomConfig.doors.forEach((door) => {
+      const wall = walls[door.wallIndex];
+      if (!wall || wall.length <= 0) return;
+      const width = clamp(door.widthM, 0.1, Math.max(0.1, wall.length - OPENING_MARGIN_M * 2));
+      const height = clamp(door.heightM ?? 2.1, 0.2, wallH);
+      const bottom = 0;
+      const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, width);
+      const center = clamp(clamp(door.positionAlongWall, 0, 1) * wall.length, minCenter, maxCenter);
+      byWall[door.wallIndex].push({
+        startX: center - width / 2 - wall.length / 2,
+        endX: center + width / 2 - wall.length / 2,
+        bottomY: bottom - wallH / 2,
+        topY: bottom + height - wallH / 2,
+      });
+    });
+
+    roomConfig.windows.forEach((windowItem) => {
+      const wall = walls[windowItem.wallIndex];
+      if (!wall || wall.length <= 0) return;
+      const width = clamp(windowItem.widthM, 0.1, Math.max(0.1, wall.length - OPENING_MARGIN_M * 2));
+      const height = clamp(windowItem.heightM ?? 1.2, 0.2, wallH);
+      const bottom = clamp(windowItem.sillHeightM, 0, Math.max(0, wallH - height));
+      const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, width);
+      const center = clamp(clamp(windowItem.positionAlongWall, 0, 1) * wall.length, minCenter, maxCenter);
+      byWall[windowItem.wallIndex].push({
+        startX: center - width / 2 - wall.length / 2,
+        endX: center + width / 2 - wall.length / 2,
+        bottomY: bottom - wallH / 2,
+        topY: bottom + height - wallH / 2,
+      });
+    });
+
+    return byWall;
+  }, [roomConfig.doors, roomConfig.windows, wallH, walls]);
 
   /* ── Drag-and-drop from furniture library ── */
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1066,6 +1239,7 @@ const Room3DPreview = ({
       y: pxY,
       width: wPx,
       height: hPx,
+      heightM: template.heightM,
       rotation: 0,
     });
   }, [onDropFurniture, bbox]);
@@ -1081,7 +1255,7 @@ const Room3DPreview = ({
     const projectedAlong = (point.x - wall.startX) * wall.tangentX + (point.z - wall.startZ) * wall.tangentZ;
     const { minCenter, maxCenter } = getOpeningAlongBounds(wall.length, placementTool.widthM);
     const centerAlong = clamp(projectedAlong, minCenter, maxCenter);
-    const bottomM = clamp(point.y - placementTool.heightM / 2, 0, Math.max(0, wallH - placementTool.heightM));
+    const windowBottomM = clamp(point.y - placementTool.heightM / 2, 0, Math.max(0, wallH - placementTool.heightM));
 
     if (placementTool.kind === "door" && onDoorAdd) {
       const item: DoorPlacement = {
@@ -1090,7 +1264,7 @@ const Room3DPreview = ({
         positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
         widthM: placementTool.widthM,
         heightM: placementTool.heightM,
-        bottomM,
+        bottomM: 0,
         styleId: placementTool.styleId,
       };
       onDoorAdd(item);
@@ -1104,7 +1278,7 @@ const Room3DPreview = ({
         positionAlongWall: wall.length > 0 ? centerAlong / wall.length : 0.5,
         widthM: placementTool.widthM,
         heightM: placementTool.heightM,
-        sillHeightM: bottomM,
+        sillHeightM: windowBottomM,
         styleId: placementTool.styleId,
       };
       onWindowAdd(item);
@@ -1136,10 +1310,13 @@ const Room3DPreview = ({
                 wallH={wallH}
                 color={roomConfig.wallColor || "#F0F0F0"}
                 hideIdx={hideWallIdx}
-                disableAutoHide={interactiveOpenings}
                 onWallPointerDown={placementTool ? handleWallPointerDown : undefined}
+                openingsByWall={openingsByWall}
+                onHiddenWallsChange={setHiddenWallIds}
               />
-              {!interactiveOpenings && <RoomOpenings doors={roomConfig.doors} windows={roomConfig.windows} walls={walls} />}
+              {!interactiveOpenings && (
+                <RoomOpenings doors={roomConfig.doors} windows={roomConfig.windows} walls={walls} hiddenWallIds={effectiveHiddenWallIds} />
+              )}
               <RoomCeiling shapePoints={shapePoints} color={roomConfig.ceilingColor || "#FFFFFF"} height={wallH} />
             </>
           )}
@@ -1175,6 +1352,7 @@ const Room3DPreview = ({
               onDoorUpdate={onDoorUpdate}
               onWindowUpdate={onWindowUpdate}
               controlsRef={controlsRef}
+              hiddenWallIds={effectiveHiddenWallIds}
             />
           )}
 
@@ -1233,5 +1411,14 @@ const Room3DPreview = ({
   "69b4ddcde8135ff7a1a1505e",
   "69b4ddcde8135ff7a1a15062",
 ].forEach((id) => useGLTF.preload(`/models/${id}.glb`));
+
+[
+  OPENING_GLB_PATHS.doors.single,
+  OPENING_GLB_PATHS.doors.double,
+  OPENING_GLB_PATHS.doors.sliding,
+  OPENING_GLB_PATHS.windows.single,
+  OPENING_GLB_PATHS.windows.double,
+  OPENING_GLB_PATHS.windows.triple,
+].forEach((path) => useGLTF.preload(path));
 
 export default Room3DPreview;
