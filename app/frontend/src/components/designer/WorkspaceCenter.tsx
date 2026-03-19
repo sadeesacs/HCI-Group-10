@@ -70,6 +70,7 @@ const WorkspaceCenter = ({
           furniture={furniture}
           interactive
           topDown={isTopDown}
+          cameraPreset="front"
           selectedId={selectedId}
           onSelect={setSelectedId}
           onFurnitureUpdate={handleFurnitureUpdate}

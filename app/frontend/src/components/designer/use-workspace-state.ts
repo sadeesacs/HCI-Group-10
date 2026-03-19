@@ -162,7 +162,7 @@ export function useWorkspaceState() {
     setSelectedId(null);
     setHasUnsavedChanges(false);
     setDeleteConfirm(null);
-    setViewMode("2D");
+    setViewMode("3D");
     initialItemsRef.current = items;
     historyRef.current = [items];
     historyIndexRef.current = 0;

@@ -1133,7 +1133,9 @@ const Room3DPreview = ({
   onWindowUpdate,
 }: Props) => {
   const { shapePoints, walls, bbox, wallH } = useRoomGeometry(roomConfig);
-  const presets = useMemo(() => getCameraPresets(bbox, wallH), [bbox, wallH]);
+  const bboxW = bbox.width;
+  const bboxH = bbox.height;
+  const presets = useMemo(() => getCameraPresets({ width: bboxW, height: bboxH }, wallH), [bboxW, bboxH, wallH]);
   const controlsRef = useRef<any>(null);
   const [selectedOpening, setSelectedOpening] = useState<{ kind: "door" | "window"; id: string } | null>(null);
   const [hiddenWallIds, setHiddenWallIds] = useState<number[]>([]);

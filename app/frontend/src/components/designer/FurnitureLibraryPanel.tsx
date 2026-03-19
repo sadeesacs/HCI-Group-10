@@ -24,22 +24,51 @@ export interface DragFurnitureTemplate {
 /** Product IDs that have GLB models in /models/{id}.glb */
 const GLB_PRODUCT_IDS = new Set([
   "69b4ddcde8135ff7a1a1503f", // Kandy Lounge Chair
-  "69b4ddcde8135ff7a1a15040",
-  "69b4ddcde8135ff7a1a15045",
-  "69b4ddcde8135ff7a1a1504b",
-  "69b4ddcde8135ff7a1a15050",
-  "69b4ddcde8135ff7a1a15077", // Lounge Chair with Ottoman
+  "69b4ddcde8135ff7a1a15040", // Colombo Dining Table
+  "69b4ddcde8135ff7a1a15045", // Ella Console Table
   "69b4ddcde8135ff7a1a15047", // Dambulla Sofa
-  "69b4ddcde8135ff7a1a15070", // Mid-Century Teak Armchair
-  "69b4ddcde8135ff7a1a1505d", // Bouclé Cloud Sofa
+  "69b4ddcde8135ff7a1a1504b", // Modern Oak Dining Table
+  "69b4ddcde8135ff7a1a15050", // Live Edge Dining Table
   "69b4ddcde8135ff7a1a1505c", // Mid-Century Teak Frame Sofa
+  "69b4ddcde8135ff7a1a1505d", // Bouclé Cloud Sofa
   "69b4ddcde8135ff7a1a1505e", // Minimalist Daybed
   "69b4ddcde8135ff7a1a15062", // Scandinavian 2-Seater Sofa
-  "69b4ddcde8135ff7a1a15064",
-  "69b4ddcde8135ff7a1a1506a",
-  "69b4ddcde8135ff7a1a15080",
-  "69b4ddcde8135ff7a1a15087",
+  "69b4ddcde8135ff7a1a15064", // Modern Oak Platform Bed (Queen)
+  "69b4ddcde8135ff7a1a1506a", // Reclaimed Wood Bed Frame (Queen)
+  "69b4ddcde8135ff7a1a15070", // Mid-Century Teak Armchair
+  "69b4ddcde8135ff7a1a15077", // Lounge Chair with Ottoman
+  "69b4ddcde8135ff7a1a15080", // Classic Oak Wardrobe
+  "69b4ddcde8135ff7a1a15087", // Mid-Century Teak Credenza
 ]);
+
+/**
+ * Hardcoded real-life dimensions (cm) for each GLB product.
+ * Bypasses dimension string parsing to guarantee correct 3D sizing.
+ * widthCm = left-right (X), depthCm = front-back (Z), heightCm = up (Y)
+ */
+const GLB_REAL_DIMS: Record<string, { widthCm: number; depthCm: number; heightCm: number }> = {
+  // ── Seating ──
+  "69b4ddcde8135ff7a1a1503f": { widthCm: 72,  depthCm: 78,  heightCm: 85  }, // Kandy Lounge Chair
+  "69b4ddcde8135ff7a1a15070": { widthCm: 72,  depthCm: 80,  heightCm: 82  }, // Mid-Century Teak Armchair
+  "69b4ddcde8135ff7a1a15077": { widthCm: 82,  depthCm: 88,  heightCm: 100 }, // Lounge Chair with Ottoman
+  // ── Sofas ──
+  "69b4ddcde8135ff7a1a15047": { widthCm: 220, depthCm: 95,  heightCm: 82  }, // Dambulla Sofa (3-seater)
+  "69b4ddcde8135ff7a1a1505c": { widthCm: 195, depthCm: 82,  heightCm: 78  }, // Mid-Century Teak Frame Sofa
+  "69b4ddcde8135ff7a1a1505d": { widthCm: 250, depthCm: 110, heightCm: 72  }, // Bouclé Cloud Sofa
+  "69b4ddcde8135ff7a1a1505e": { widthCm: 190, depthCm: 80,  heightCm: 60  }, // Minimalist Daybed
+  "69b4ddcde8135ff7a1a15062": { widthCm: 155, depthCm: 80,  heightCm: 82  }, // Scandinavian 2-Seater Sofa
+  // ── Tables ──
+  "69b4ddcde8135ff7a1a15040": { widthCm: 180, depthCm: 90,  heightCm: 75  }, // Colombo Dining Table
+  "69b4ddcde8135ff7a1a1504b": { widthCm: 180, depthCm: 90,  heightCm: 75  }, // Modern Oak Dining Table
+  "69b4ddcde8135ff7a1a15050": { widthCm: 200, depthCm: 92,  heightCm: 76  }, // Live Edge Dining Table
+  "69b4ddcde8135ff7a1a15045": { widthCm: 120, depthCm: 35,  heightCm: 78  }, // Ella Console Table
+  // ── Beds (Queen) ──
+  "69b4ddcde8135ff7a1a15064": { widthCm: 165, depthCm: 210, heightCm: 85  }, // Modern Oak Platform Bed
+  "69b4ddcde8135ff7a1a1506a": { widthCm: 168, depthCm: 215, heightCm: 110 }, // Reclaimed Wood Bed Frame
+  // ── Storage ──
+  "69b4ddcde8135ff7a1a15080": { widthCm: 120, depthCm: 60,  heightCm: 200 }, // Classic Oak Wardrobe
+  "69b4ddcde8135ff7a1a15087": { widthCm: 180, depthCm: 45,  heightCm: 75  }, // Mid-Century Teak Credenza
+};
 
 const hasGlbModel = (productId: string) => GLB_PRODUCT_IDS.has(productId);
 const glbPathFor = (productId: string) => `/models/${productId}.glb`;
@@ -156,9 +185,16 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
     return defaults;
   };
 
+  /** Get resolved dimensions for a product: use hardcoded override if available, else parse string */
+  const getDimsCm = (item: Product) => {
+    const override = GLB_REAL_DIMS[item.id];
+    if (override) return { lengthCm: override.widthCm, widthCm: override.depthCm, heightCm: override.heightCm };
+    return parseDimsCm(item.dimensions);
+  };
+
   const handleAdd = (item: Product) => {
     if (!onAddFurniture) return;
-    const { lengthCm, widthCm, heightCm } = parseDimsCm(item.dimensions);
+    const { lengthCm, widthCm, heightCm } = getDimsCm(item);
     const wM = lengthCm / 100;
     const dM = widthCm / 100;
     const hM = heightCm / 100;
@@ -187,7 +223,7 @@ const FurnitureLibraryPanel = ({ onAddFurniture }: FurnitureLibraryPanelProps) =
   };
 
   const handleDragStart = (e: React.DragEvent, item: Product) => {
-    const { lengthCm, widthCm, heightCm } = parseDimsCm(item.dimensions);
+    const { lengthCm, widthCm, heightCm } = getDimsCm(item);
     const payload: DragFurnitureTemplate = {
       name: item.name,
       widthM: lengthCm / 100,

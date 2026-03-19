@@ -208,11 +208,11 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
   }, [step, onCancel]);
 
   return (
-    <div className="flex h-screen bg-[hsl(40,25%,98%)]">
+    <div className="flex h-screen bg-white">
       {/* ── Left Panel ── */}
       <div className="flex w-full flex-col border-r border-[hsl(30,15%,88%)] md:w-[42%] lg:w-[36%]">
         {/* Step header */}
-        <div className="flex-1 overflow-y-auto px-7 pt-10 pb-4 lg:px-10 lg:pt-12">
+        <div className="flex-1 overflow-y-auto px-7 pt-10 pb-4 lg:px-10 lg:pt-12 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
           <StepProgress current={step} total={STEPS.length} />
 
           <p className="mt-5 text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(30,10%,55%)]">
@@ -267,12 +267,12 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
         </div>
 
         {/* Navigation */}
-        <div className="flex gap-3 border-t border-[hsl(30,15%,88%)] bg-[hsl(40,20%,97%)] p-5 lg:p-6">
+        <div className="flex gap-3 border-t border-[hsl(30,15%,88%)] bg-white p-5 lg:p-6">
           {step > 0 ? (
             <Button
               variant="outline"
               onClick={handleBack}
-              className="h-12 flex-1 rounded-full border-[hsl(30,15%,80%)] bg-white text-sm font-semibold text-[hsl(28,20%,25%)] hover:bg-[hsl(38,20%,95%)] hover:border-[hsl(28,35%,55%)]"
+              className="h-12 flex-1 rounded-sm border-[hsl(30,15%,80%)] bg-white text-sm font-semibold text-[hsl(28,20%,25%)] hover:bg-[hsl(38,20%,95%)] hover:border-[hsl(28,35%,55%)]"
             >
               Go back
             </Button>
@@ -280,14 +280,14 @@ const RoomSetupWizard = ({ initialConfig, onComplete, onCancel }: RoomSetupWizar
             <Button
               variant="outline"
               onClick={onCancel}
-              className="h-12 flex-1 rounded-full border-[hsl(30,15%,80%)] bg-white text-sm font-semibold text-[hsl(28,20%,25%)] hover:bg-[hsl(38,20%,95%)] hover:border-[hsl(28,35%,55%)]"
+              className="h-12 flex-1 rounded-sm border-[hsl(30,15%,80%)] bg-white text-sm font-semibold text-[hsl(28,20%,25%)] hover:bg-[hsl(38,20%,95%)] hover:border-[hsl(28,35%,55%)]"
             >
               Cancel
             </Button>
           ) : null}
           <Button
             onClick={handleNext}
-            className="h-12 flex-1 rounded-full bg-[hsl(28,35%,32%)] text-white text-sm font-semibold uppercase tracking-wider hover:bg-[hsl(28,35%,26%)] shadow-md"
+            className="h-12 flex-1 rounded-sm bg-[hsl(28,35%,32%)] text-white text-sm font-semibold uppercase tracking-wider hover:bg-[hsl(28,35%,26%)] shadow-md"
           >
             {step === 4 ? "Design this room" : "Next"}
           </Button>
