@@ -1,6 +1,7 @@
 import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { Canvas, useThree, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
+import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -252,7 +253,7 @@ function getCameraPresets(
 
 /* ─── R3F: Camera controller ─── */
 function CameraController({ preset, locked }: { preset: CameraPresetData; locked?: boolean }) {
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
   const { camera } = useThree();
 
   useEffect(() => {
@@ -489,7 +490,7 @@ function InteractiveFurnitureItem({
   selected: boolean;
   onSelect: (id: string) => void;
   onUpdate: (id: string, attrs: Partial<PlacedFurniture>) => void;
-  controlsRef: React.MutableRefObject<any>;
+  controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const isDragging = useRef(false);
@@ -536,7 +537,7 @@ function InteractiveFurnitureItem({
       x: Math.max(0, Math.min(maxPxX, newPxX)),
       y: Math.max(0, Math.min(maxPxY, newPxY)),
     });
-  }, [item.id, wM, dM, bbox, onUpdate]);
+  }, [item.id, item.width, item.height, wM, dM, bbox, onUpdate]);
 
   const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
     if (!isDragging.current) return;
@@ -617,7 +618,7 @@ function InteractiveFurniture({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onUpdate: (id: string, attrs: Partial<PlacedFurniture>) => void;
-  controlsRef: React.MutableRefObject<any>;
+  controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
   return (
     <group>
@@ -814,7 +815,7 @@ function InteractiveDoorItem({
   selected: boolean;
   onSelect: (id: string) => void;
   onUpdate: (id: string, attrs: Partial<DoorPlacement>) => void;
-  controlsRef: React.MutableRefObject<any>;
+  controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
   const isDragging = useRef(false);
   const dragPlane = useMemo(
@@ -876,7 +877,7 @@ function InteractiveWindowItem({
   selected: boolean;
   onSelect: (id: string) => void;
   onUpdate: (id: string, attrs: Partial<WindowPlacement>) => void;
-  controlsRef: React.MutableRefObject<any>;
+  controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
   const isDragging = useRef(false);
   const dragPlane = useMemo(
@@ -982,7 +983,7 @@ function InteractiveOpenings({
   onSelectOpening: (opening: { kind: "door" | "window"; id: string } | null) => void;
   onDoorUpdate?: (id: string, attrs: Partial<DoorPlacement>) => void;
   onWindowUpdate?: (id: string, attrs: Partial<WindowPlacement>) => void;
-  controlsRef: React.MutableRefObject<any>;
+  controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
   hiddenWallIds: number[];
 }) {
   const hiddenSet = useMemo(() => new Set(hiddenWallIds), [hiddenWallIds]);
@@ -1073,7 +1074,7 @@ function InteractiveOrbitalControls({
 }: {
   preset: CameraPresetData;
   locked?: boolean;
-  innerRef: React.MutableRefObject<any>;
+  innerRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
   const { camera } = useThree();
 
@@ -1136,21 +1137,19 @@ const Room3DPreview = ({
   const bboxW = bbox.width;
   const bboxH = bbox.height;
   const presets = useMemo(() => getCameraPresets({ width: bboxW, height: bboxH }, wallH), [bboxW, bboxH, wallH]);
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const [selectedOpening, setSelectedOpening] = useState<{ kind: "door" | "window"; id: string } | null>(null);
   const [hiddenWallIds, setHiddenWallIds] = useState<number[]>([]);
 
   // For non-interactive: manage preset internally
   const effectiveInitialPreset = topDown ? "top" : (initialPreset ?? "default");
   const [activePreset, setActivePreset] = useState<CameraPresetName>(effectiveInitialPreset);
+  const [prevEffective, setPrevEffective] = useState(effectiveInitialPreset);
 
-  useEffect(() => {
-    if (topDown) {
-      setActivePreset("top");
-    } else if (initialPreset) {
-      setActivePreset(initialPreset);
-    }
-  }, [initialPreset, topDown]);
+  if (effectiveInitialPreset !== prevEffective) {
+    setPrevEffective(effectiveInitialPreset);
+    setActivePreset(effectiveInitialPreset);
+  }
 
   const preset = presets[activePreset];
   const isLocked = topDown || cameraLocked;
