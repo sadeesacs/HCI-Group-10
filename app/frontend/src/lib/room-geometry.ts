@@ -6,9 +6,7 @@ import type {
   SquareDims,
 } from "@/types/designer";
 
-/* ══════════════════════════════════════════════════════
-   Default configs per shape
-   ══════════════════════════════════════════════════════ */
+/* Default configs per shape */
 
 const DEFAULT_DIMS: Record<RoomShape, RoomDimensions> = {
   rectangle: { shape: "rectangle", dims: { width: 4.5, length: 6 } },
@@ -57,9 +55,7 @@ export function getDefaultDimensions(shape: RoomShape): RoomDimensions {
   return structuredClone(DEFAULT_DIMS[shape]);
 }
 
-/* ══════════════════════════════════════════════════════
-   Derived-field normalization
-   ══════════════════════════════════════════════════════ */
+/* Derived-field normalization */
 
 export function normalizeRoomDimensions(dim: RoomDimensions): RoomDimensions {
   switch (dim.shape) {
@@ -107,9 +103,7 @@ export function normalizeRoomDimensions(dim: RoomDimensions): RoomDimensions {
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   Validation
-   ══════════════════════════════════════════════════════ */
+/* Validation*/
 
 const MIN_M = 1;
 const MAX_M = 30;
@@ -181,11 +175,6 @@ export function validateRoomDimensions(dim: RoomDimensions): ValidationResult {
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-/* ══════════════════════════════════════════════════════
-   Polygon generation (meters → relative coords)
-   Returns closed polygon as [x,y,x,y,...] starting at
-   top-left and going clockwise. Origin at (0,0).
-   ══════════════════════════════════════════════════════ */
 
 export function getRoomPolygon(config: RoomConfig): number[] {
   return getRoomPolygonFromDims(config.dimensions);
@@ -259,9 +248,7 @@ function rectPoly(w: number, h: number): number[] {
   return [0, 0, w, 0, w, h, 0, h];
 }
 
-/* ══════════════════════════════════════════════════════
-   Bounding box (meters)
-   ══════════════════════════════════════════════════════ */
+/* Bounding box (meters) */
 
 export interface BoundingBox {
   width: number;
@@ -290,9 +277,7 @@ export function getBoundingBoxFromDims(dim: RoomDimensions): BoundingBox {
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   Dimension field schemas (for config-driven forms)
-   ══════════════════════════════════════════════════════ */
+/* Dimension field schemas (for config-driven forms)*/
 
 export interface DimField {
   key: string;

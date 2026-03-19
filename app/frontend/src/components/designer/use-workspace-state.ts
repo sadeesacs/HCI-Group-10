@@ -19,8 +19,10 @@ export function useWorkspaceState() {
   const initialItemsRef = useRef<PlacedFurniture[]>([]);
   const historyRef = useRef<PlacedFurniture[][]>([[]]);
   const historyIndexRef = useRef(0);
+  const changeCountRef = useRef(0);
 
   const pushHistory = useCallback((next: PlacedFurniture[]) => {
+    changeCountRef.current = 0;
     const idx = historyIndexRef.current;
     const newHistory = historyRef.current.slice(0, idx + 1);
     newHistory.push(next);
@@ -29,6 +31,14 @@ export function useWorkspaceState() {
     historyIndexRef.current = newHistory.length - 1;
     setHistoryMeta({ index: historyIndexRef.current, length: historyRef.current.length });
   }, []);
+
+  /** Throttled push: only snapshots every 10th call (for continuous drags) */
+  const throttledPushHistory = useCallback((next: PlacedFurniture[]) => {
+    changeCountRef.current += 1;
+    if (changeCountRef.current >= 10) {
+      pushHistory(next);
+    }
+  }, [pushHistory]);
 
   const selectedItem = furniture.find((f) => f.id === selectedId) ?? null;
   const selectionState: SelectionState = selectedItem ? "furniture" : "none";
@@ -67,11 +77,11 @@ export function useWorkspaceState() {
         merged.y = Math.max(0, Math.min(merged.y, maxH - merged.height));
         return merged;
       });
-      pushHistory(next);
+      throttledPushHistory(next);
       return next;
     });
     markDirty();
-  }, [pushHistory, markDirty, roomConfig]);
+  }, [throttledPushHistory, markDirty, roomConfig]);
 
   const handleRotate = useCallback((deg: number) => {
     if (!selectedId) return;

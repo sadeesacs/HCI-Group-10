@@ -16,9 +16,7 @@ import {
 } from "@/lib/room-geometry";
 import Room3DPreview, { type OpeningPlacementTool } from "./Room3DPreview";
 
-/* ═══════════════════════════════════════════════════
-   Constants
-   ═══════════════════════════════════════════════════ */
+/* Constants */
 
 const STEPS = [
   { title: "Set the shape and size", subtitle: "Choose the room shape for your design." },
@@ -28,14 +26,14 @@ const STEPS = [
   { title: "Choose your room style", subtitle: "Pick colors for walls, floor, and ceiling." },
 ];
 
-/* ── Door style catalog ── */
+/* Door style catalog */
 const DOOR_STYLES: { id: string; label: string; description: string; widthM: number; heightM: number }[] = [
   { id: "single",  label: "Single Door",  description: "Standard 900mm swing door",  widthM: 0.9, heightM: 2.1 },
   { id: "double",  label: "Double Door",  description: "French / double swing door",  widthM: 1.5, heightM: 2.1 },
   { id: "sliding", label: "Sliding Door", description: "Space-saving sliding panel",   widthM: 1.5, heightM: 2.1 },
 ];
 
-/* ── Window style catalog ── */
+/* Window style catalog */
 const WINDOW_STYLES: { id: string; label: string; description: string; widthM: number; heightM: number; sillHeightM: number }[] = [
   { id: "single", label: "Single Window", description: "Single-panel wall window", widthM: 1.0, heightM: 1.2, sillHeightM: 0.9 },
   { id: "double", label: "Double Window", description: "Two-panel wall window", widthM: 1.6, heightM: 1.2, sillHeightM: 0.9 },
@@ -71,9 +69,7 @@ const GRID_BG_STYLE: React.CSSProperties = {
   backgroundSize: "24px 24px",
 };
 
-/* ═══════════════════════════════════════════════════
-   Step Progress Indicator
-   ═══════════════════════════════════════════════════ */
+/* Step Progress Indicator */
 
 const StepProgress = ({ current, total }: { current: number; total: number }) => (
   <div className="flex items-center justify-center gap-2 mb-2">
@@ -102,9 +98,7 @@ const StepProgress = ({ current, total }: { current: number; total: number }) =>
   </div>
 );
 
-/* ═══════════════════════════════════════════════════
-   Wizard component
-   ═══════════════════════════════════════════════════ */
+/* Wizard component*/
 
 interface RoomSetupWizardProps {
   initialConfig: RoomConfig;
