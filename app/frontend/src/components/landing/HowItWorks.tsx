@@ -59,11 +59,11 @@ const HowItWorks = () => {
               className="relative flex flex-col items-center text-center"
             >
               {/* Image */}
-              <div className="w-full aspect-[4/3] overflow-hidden rounded-2xl shadow-md">
+              <div className="w-full overflow-hidden border border-border shadow-md">
                 <img
                   src={step.image}
                   alt={step.title}
-                  className="w-full h-full object-contain"
+                  className="block w-full h-auto"
                   loading="lazy"
                 />
               </div>
