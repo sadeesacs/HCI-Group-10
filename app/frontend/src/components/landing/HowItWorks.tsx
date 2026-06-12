@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-const step1Image = "/assets/steps/step-1-room-layout.jpg";
-const step2Image = "/assets/steps/step-2-place-furniture.jpg";
-const step3Image = "/assets/steps/step-3-preview-3d.jpg";
+const step1Image = "/assets/Step1.png";
+const step2Image = "/assets/Step2.png";
+const step3Image = "/assets/Step3.png";
 
 const steps = [
   {
@@ -63,7 +63,7 @@ const HowItWorks = () => {
                 <img
                   src={step.image}
                   alt={step.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   loading="lazy"
                 />
               </div>
